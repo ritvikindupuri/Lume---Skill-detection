@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { scanArtifact, type Finding, type ScanResult } from "@/lib/scanner/engine";
 import { ArtifactError, readArtifact, readPastedSkill } from "@/lib/scanner/load";
 import { download, toMarkdown } from "@/lib/scanner/report";
@@ -7,10 +8,10 @@ import { LAYER_LABEL, RULES, SEVERITY_ORDER, type Severity } from "@/lib/scanner
 type Phase = "idle" | "working" | "done";
 
 const SEVERITY_STYLES: Record<Severity, { dot: string; text: string; chip: string }> = {
-  critical: { dot: "bg-crit", text: "text-crit", chip: "bg-crit/10 text-crit" },
+  critical: { dot: "bg-critical", text: "text-critical", chip: "bg-critical/10 text-critical" },
   high: { dot: "bg-high", text: "text-high", chip: "bg-high/10 text-high" },
-  medium: { dot: "bg-med", text: "text-med", chip: "bg-med/10 text-med" },
-  low: { dot: "bg-muted", text: "text-muted", chip: "bg-muted/10 text-muted" },
+  medium: { dot: "bg-medium", text: "text-medium", chip: "bg-medium/10 text-medium" },
+  low: { dot: "bg-muted", text: "text-muted-foreground", chip: "bg-muted/10 text-muted-foreground" },
 };
 
 const VERDICT_COPY = {
@@ -100,14 +101,14 @@ export function SkillScanner() {
   };
 
   return (
-    <div className="mt-6 grid grid-cols-12 gap-4">
+    <div className="glass-panel mt-6 grid grid-cols-12 gap-4 rounded-[28px] p-3 sm:p-5">
       {/* LEFT: artifact */}
       <div className="col-span-12 lg:col-span-4">
-        <div className="rounded-[12px] border border-dashed border-line bg-paper/70 p-4">
+        <div className="rounded-[20px] border border-border bg-card/70 p-4">
           <div className="flex items-center justify-between">
             <p className="label-mono">artifact</p>
             {result && (
-              <button onClick={reset} className="font-mono text-[11px] text-signal hover:underline">
+              <button onClick={reset} className="font-mono text-[11px] text-primary hover:underline">
                 clear
               </button>
             )}
@@ -147,22 +148,22 @@ export function SkillScanner() {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === "Enter" && fileInput.current?.click()}
-            className={`mt-3 flex cursor-pointer flex-col items-center rounded-[10px] border border-dashed py-9 text-center transition-colors ${
-              dragging ? "border-signal bg-skydeep" : "border-line bg-skyfield/60 hover:border-signal/50 hover:bg-skyfield"
+            className={`mt-3 flex cursor-pointer flex-col items-center rounded-[16px] border border-dashed py-12 text-center transition-colors ${
+              dragging ? "border-primary bg-accent" : "border-border bg-secondary/60 hover:border-primary/50 hover:bg-secondary"
             }`}
           >
-            <span className="flex size-11 items-center justify-center rounded-full bg-ink font-mono text-lg text-skyfield">
+            <span className="flex size-11 items-center justify-center rounded-full bg-secondary font-mono text-lg text-foreground">
               +
             </span>
             <p className="mt-3 text-[14px] font-semibold">Drop a skill folder or .md</p>
-            <p className="mt-1 font-mono text-[11px] text-muted">.zip · .md · skill/ · up to 20 MB</p>
+            <p className="mt-1 font-mono text-[11px] text-muted-foreground">.zip · .md · skill/ · up to 20 MB</p>
           </div>
 
-          <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-muted">
-            <button onClick={() => dirInput.current?.click()} className="hover:text-signal">
+          <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+            <button onClick={() => dirInput.current?.click()} className="hover:text-primary">
               choose folder
             </button>
-            <button onClick={() => setPasteOpen((v) => !v)} className="hover:text-signal">
+            <button onClick={() => setPasteOpen((v) => !v)} className="hover:text-primary">
               {pasteOpen ? "hide paste" : "paste SKILL.md"}
             </button>
           </div>
@@ -175,7 +176,7 @@ export function SkillScanner() {
                 rows={7}
                 spellCheck={false}
                 placeholder="---&#10;name: my-skill&#10;description: ...&#10;---"
-                className="w-full rounded-[8px] border border-line bg-skyfield/60 p-3 font-mono text-[12px] outline-none focus:border-signal"
+                className="w-full rounded-[8px] border border-border bg-secondary/60 p-3 font-mono text-[12px] outline-none focus:border-primary"
               />
               <button
                 onClick={() => void run(() => readPastedSkill(pasted))}
@@ -187,19 +188,19 @@ export function SkillScanner() {
           )}
 
           {error && (
-            <p className="mt-3 rounded-[8px] bg-crit/10 px-3 py-2 font-mono text-[11px] text-crit">
+            <p className="mt-3 rounded-[8px] bg-critical/10 px-3 py-2 font-mono text-[11px] text-critical">
               {error}
             </p>
           )}
 
-          <p className="mt-4 border-t border-line pt-3 font-mono text-[10px] leading-relaxed text-muted">
+          <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
             Analysis runs entirely in this browser. Artifact bytes are never uploaded.
           </p>
         </div>
 
         {/* file tree */}
         {result && (
-          <div className="mt-4 rounded-[12px] border border-line bg-paper/70 p-4">
+          <div className="mt-4 rounded-[12px] border border-border bg-card/70 p-4">
             <p className="label-mono">files · {result.files.length}</p>
             <ul className="mt-3 space-y-1.5">
               {result.files.map((f) => (
@@ -207,24 +208,24 @@ export function SkillScanner() {
                   <span
                     className={`size-1.5 shrink-0 rounded-full ${f.findings ? "bg-high" : "bg-safe"}`}
                   />
-                  <span className="truncate text-ink2" title={f.path}>
+                  <span className="truncate text-card-foreground" title={f.path}>
                     {f.path}
                   </span>
-                  <span className="ml-auto shrink-0 text-muted">{formatBytes(f.size)}</span>
+                  <span className="ml-auto shrink-0 text-muted-foreground">{formatBytes(f.size)}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-4 space-y-1.5 border-t border-line pt-3 font-mono text-[11px] text-muted">
+            <div className="mt-4 space-y-1.5 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground">
               <p className="break-all">
-                <span className="text-ink2">sha-256</span> {result.sha256.slice(0, 32)}…
+                <span className="text-card-foreground">sha-256</span> {result.sha256.slice(0, 32)}…
               </p>
               <p>
-                <span className="text-ink2">rules</span> {result.rulesEvaluated} evaluated in{" "}
+                <span className="text-card-foreground">rules</span> {result.rulesEvaluated} evaluated in{" "}
                 {result.durationMs} ms
               </p>
               {result.metadata.name && (
                 <p>
-                  <span className="text-ink2">declared</span> {result.metadata.name}
+                  <span className="text-card-foreground">declared</span> {result.metadata.name}
                 </p>
               )}
             </div>
@@ -233,13 +234,13 @@ export function SkillScanner() {
 
         {/* endpoints */}
         {result && result.endpoints.length > 0 && (
-          <div className="mt-4 rounded-[12px] border border-line bg-paper/70 p-4">
+          <div className="mt-4 rounded-[12px] border border-border bg-card/70 p-4">
             <p className="label-mono">external endpoints · {result.endpoints.length}</p>
             <ul className="mt-3 space-y-1.5 font-mono text-[12px]">
               {result.endpoints.map((e) => (
                 <li key={e.host} className="flex items-center gap-2">
-                  <span className="truncate text-ink2">{e.host}</span>
-                  <span className="ml-auto text-muted">×{e.occurrences}</span>
+                  <span className="truncate text-card-foreground">{e.host}</span>
+                  <span className="ml-auto text-muted-foreground">×{e.occurrences}</span>
                 </li>
               ))}
             </ul>
@@ -249,10 +250,10 @@ export function SkillScanner() {
 
       {/* RIGHT: verdict + findings */}
       <div className="col-span-12 lg:col-span-8">
-        <div className="sticky top-[64px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-ink px-4 py-3 text-skyfield ring-1 ring-black/5">
+        <div className="sticky top-[64px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-[18px] bg-secondary px-4 py-3 text-foreground ring-1 ring-border">
           <div className="flex items-center gap-3">
             <span
-              className={`flex size-9 items-center justify-center rounded-[8px] bg-skyfield/10 font-mono text-[15px] font-semibold ${
+              className={`flex size-9 items-center justify-center rounded-[8px] bg-secondary/10 font-mono text-[15px] font-semibold ${
                 result ? SEVERITY_STYLES[result.verdict === "clean" ? "low" : result.verdict === "malicious" ? "critical" : "high"].text : ""
               }`}
             >
@@ -262,7 +263,7 @@ export function SkillScanner() {
               <p className="font-display text-[15px] font-semibold">
                 {result ? VERDICT_COPY[result.verdict].label : phase === "working" ? "Analyzing…" : "No verdict yet"}
               </p>
-              <p className="font-mono text-[11px] text-skyfield/50">
+              <p className="font-mono text-[11px] text-foreground/50">
                 {result
                   ? `${result.artifactName} · ${VERDICT_COPY[result.verdict].note}`
                   : "awaiting artifact · safe / suspicious / malicious"}
@@ -270,7 +271,7 @@ export function SkillScanner() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="rounded-[7px] bg-skyfield/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-skyfield/60">
+            <span className="rounded-[7px] bg-secondary/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-foreground/60">
               score {result ? `${result.score}/100` : "—"}
             </span>
             <button
@@ -278,7 +279,7 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `paragraph-report-${result.sha256.slice(0, 8)}.md`,
+                  `attest-report-${result.sha256.slice(0, 8)}.md`,
                   toMarkdown(result),
                   "text/markdown",
                 )
@@ -292,12 +293,12 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `paragraph-report-${result.sha256.slice(0, 8)}.json`,
+                  `attest-report-${result.sha256.slice(0, 8)}.json`,
                   JSON.stringify(result, null, 2),
                   "application/json",
                 )
               }
-              className="btn-quiet px-3 py-1.5 text-[12px] text-skyfield shadow-[inset_0_0_0_1px_color-mix(in_oklab,white_20%,transparent)] hover:bg-skyfield/10"
+              className="btn-quiet px-3 py-1.5 text-[12px] text-foreground hover:bg-accent"
             >
               JSON
             </button>
@@ -306,15 +307,15 @@ export function SkillScanner() {
 
         {/* working */}
         {phase === "working" && (
-          <div className="relative mt-4 min-h-[320px] overflow-hidden rounded-[12px] border border-line bg-paper">
-            <div className="pointer-events-none absolute inset-x-0 h-[2px] animate-scanline bg-signal/60" />
+          <div className="relative mt-4 min-h-[320px] overflow-hidden rounded-[12px] border border-border bg-card">
+            <div className="pointer-events-none absolute inset-x-0 h-[2px] animate-scanline bg-primary/60" />
             <div className="space-y-1 px-4 py-4 font-mono text-[12px]">
               {STAGES.map((s, i) => (
                 <div key={s} className="flex animate-rise" style={{ animationDelay: `${i * 90}ms` }}>
                   <span className="w-5 text-safe">✓</span>
-                  <span className="text-muted">{s}</span>
-                  <span className="flex-1 border-b border-dotted border-line/70" />
-                  <span className="text-ink2">pass {i + 1}</span>
+                  <span className="text-muted-foreground">{s}</span>
+                  <span className="flex-1 border-b border-dotted border-border/70" />
+                  <span className="text-card-foreground">pass {i + 1}</span>
                 </div>
               ))}
             </div>
@@ -323,18 +324,18 @@ export function SkillScanner() {
 
         {/* empty */}
         {phase !== "working" && !result && (
-          <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center rounded-[12px] border border-line bg-paper/60 px-6 text-center">
-            <span className="flex size-14 items-center justify-center rounded-full border border-line bg-skyfield font-mono text-xl text-muted">
-              ¶
+          <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center rounded-[20px] border border-border bg-card/60 px-6 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full border border-border bg-secondary text-primary">
+              <ShieldCheck className="size-6" strokeWidth={1.5} />
             </span>
-            <p className="mt-4 font-display text-lg font-semibold">Nothing on the bench</p>
-            <p className="mt-1 max-w-[40ch] text-[13px] leading-relaxed text-muted">
+            <p className="mt-4 font-display text-lg font-semibold">Ready when you are</p>
+            <p className="mt-1 max-w-[40ch] text-[13px] leading-relaxed text-muted-foreground">
               Findings appear here, grouped by severity, the moment a scan completes. Nothing is shown
               until a real skill is analyzed against all {RULES.length} rules.
             </p>
-            <div className="mt-5 flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+            <div className="mt-5 flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-crit" />
+                <span className="size-2 rounded-full bg-critical" />
                 critical
               </span>
               <span className="flex items-center gap-1.5">
@@ -342,7 +343,7 @@ export function SkillScanner() {
                 high
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-med" />
+                <span className="size-2 rounded-full bg-medium" />
                 medium
               </span>
             </div>
@@ -359,24 +360,24 @@ export function SkillScanner() {
                   onClick={() => toggleSeverity(sev)}
                   className={`flex items-center gap-2 rounded-[7px] border px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors ${
                     activeSeverities.includes(sev)
-                      ? "border-line bg-paper text-ink2"
-                      : "border-line/60 bg-transparent text-muted"
+                      ? "border-border bg-card text-card-foreground"
+                      : "border-border/60 bg-transparent text-muted-foreground"
                   }`}
                 >
                   <span className={`size-2 rounded-full ${SEVERITY_STYLES[sev].dot}`} />
                   {sev}
-                  <span className="text-muted">{result.counts[sev]}</span>
+                  <span className="text-muted-foreground">{result.counts[sev]}</span>
                 </button>
               ))}
             </div>
 
             {result.findings.length === 0 ? (
-              <div className="mt-4 flex min-h-[260px] flex-col items-center justify-center rounded-[12px] border border-line bg-paper/60 px-6 text-center">
+              <div className="mt-4 flex min-h-[260px] flex-col items-center justify-center rounded-[12px] border border-border bg-card/60 px-6 text-center">
                 <span className="flex size-12 items-center justify-center rounded-full bg-safe/10 text-safe">
                   ✓
                 </span>
                 <p className="mt-4 font-display text-lg font-semibold">No rule matched</p>
-                <p className="mt-1 max-w-[44ch] text-[13px] text-muted">
+                <p className="mt-1 max-w-[44ch] text-[13px] text-muted-foreground">
                   All {result.rulesEvaluated} rules were evaluated against {result.files.length}{" "}
                   file(s) and none matched. A clean scan is not a guarantee — review the instruction
                   text before granting tool scope.
@@ -396,7 +397,7 @@ export function SkillScanner() {
                         return (
                           <li
                             key={f.key}
-                            className="rounded-[10px] border border-line bg-paper transition-colors hover:border-signal/40"
+                            className="rounded-[10px] border border-border bg-card transition-colors hover:border-primary/40"
                           >
                             <button
                               onClick={() => setOpenFinding(open ? null : f.key)}
@@ -411,24 +412,24 @@ export function SkillScanner() {
                                 <span className="block font-display text-[14px] font-semibold">
                                   {f.title}
                                 </span>
-                                <span className="mt-0.5 block truncate font-mono text-[11px] text-muted">
+                                <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">
                                   {LAYER_LABEL[f.layer]} · {f.file}
                                   {f.line ? `:${f.line}` : ""}
                                 </span>
                               </span>
-                              <span className="shrink-0 font-mono text-[11px] text-muted">
+                              <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                                 {open ? "−" : "+"}
                               </span>
                             </button>
                             {open && (
-                              <div className="border-t border-line px-4 py-3">
-                                <pre className="overflow-x-auto rounded-[8px] bg-skyfield px-3 py-2 font-mono text-[11px] text-ink2">
+                              <div className="border-t border-border px-4 py-3">
+                                <pre className="overflow-x-auto rounded-[8px] bg-secondary px-3 py-2 font-mono text-[11px] text-card-foreground">
                                   {f.evidence}
                                 </pre>
-                                <p className="mt-3 text-[13px] leading-relaxed text-ink2">
+                                <p className="mt-3 text-[13px] leading-relaxed text-card-foreground">
                                   {f.rationale}
                                 </p>
-                                <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
                                   <span className="font-mono text-[11px] uppercase tracking-[0.12em]">
                                     fix ·{" "}
                                   </span>
