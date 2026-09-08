@@ -9,7 +9,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Aperture — Claude Skill Security" },
-      { name: "description", content: "Scan Claude skills for hidden instructions, unsafe behavior, dependency risk, and data exfiltration before they run." },
+      { name: "description", content: "Scan Claude skills with 35 security controls and the strongest GPT analysis for hidden intent, unsafe behavior, and data leakage." },
       { property: "og:title", content: "Aperture — Claude Skill Security" },
       { property: "og:description", content: "Know what a Claude skill will do before you trust it." },
       { property: "og:type", content: "website" },

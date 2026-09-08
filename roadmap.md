@@ -7,4 +7,4 @@
 - [x] Verify sign-in, scanning, saved results, and responsive layout
 - [x] Add strongest GPT intent analysis after deterministic scanning
 - [x] Replace Attest identity with Aperture and the selected synthetic-A mark
-- [ ] Verify AI detection, error handling, branding, and responsive layout
+- [x] Verify AI detection, error handling, branding, and responsive layout

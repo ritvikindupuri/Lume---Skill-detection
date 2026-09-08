@@ -66,8 +66,8 @@ export function SkillScanner() {
           e instanceof ArtifactError
             ? e.message
             : e instanceof Error
-              ? `Could not read this artifact: ${e.message}`
-              : "Could not read this artifact.",
+              ? e.message
+              : "The analysis could not be completed.",
         );
         setPhase("idle");
       }
@@ -233,6 +233,11 @@ export function SkillScanner() {
                 <span className="text-card-foreground">rules</span> {result.rulesEvaluated} evaluated in{" "}
                 {result.durationMs} ms
               </p>
+              {result.ai && (
+                <p>
+                  <span className="text-card-foreground">AI review</span> strongest GPT · {result.ai.findings} additional finding(s)
+                </p>
+              )}
               {result.metadata.name && (
                 <p>
                   <span className="text-card-foreground">declared</span> {result.metadata.name}
@@ -282,7 +287,7 @@ export function SkillScanner() {
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-[7px] bg-secondary/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-foreground/60">
-              score {result ? `${result.score}/100` : "—"}
+              {result ? `${result.score}/100` : "—"}
             </span>
             <button
               disabled={!result}
