@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDown, LockKeyhole } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SkillScanner } from "@/components/scanner/SkillScanner";

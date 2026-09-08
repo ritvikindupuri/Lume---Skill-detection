@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { scanArtifact, type Finding, type ScanResult } from "@/lib/scanner/engine";
 import { ArtifactError, readArtifact, readPastedSkill } from "@/lib/scanner/load";
 import { download, toMarkdown } from "@/lib/scanner/report";
@@ -108,9 +109,9 @@ export function SkillScanner() {
           <div className="flex items-center justify-between">
             <p className="label-mono">artifact</p>
             {result && (
-              <button onClick={reset} className="font-mono text-[11px] text-primary hover:underline">
+              <Button variant="link" size="sm" onClick={reset} className="h-auto p-0 font-mono text-[11px]">
                 clear
-              </button>
+              </Button>
             )}
           </div>
 
@@ -160,12 +161,12 @@ export function SkillScanner() {
           </div>
 
           <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-            <button onClick={() => dirInput.current?.click()} className="hover:text-primary">
+            <Button variant="link" size="sm" onClick={() => dirInput.current?.click()} className="h-auto p-0 font-mono text-[11px]">
               choose folder
-            </button>
-            <button onClick={() => setPasteOpen((v) => !v)} className="hover:text-primary">
+            </Button>
+            <Button variant="link" size="sm" onClick={() => setPasteOpen((v) => !v)} className="h-auto p-0 font-mono text-[11px]">
               {pasteOpen ? "hide paste" : "paste SKILL.md"}
-            </button>
+            </Button>
           </div>
 
           {pasteOpen && (
@@ -178,12 +179,12 @@ export function SkillScanner() {
                 placeholder="---&#10;name: my-skill&#10;description: ...&#10;---"
                 className="w-full rounded-[8px] border border-border bg-secondary/60 p-3 font-mono text-[12px] outline-none focus:border-primary"
               />
-              <button
+              <Button
                 onClick={() => void run(() => readPastedSkill(pasted))}
-                className="btn-ink mt-2 w-full px-4 py-2 text-[13px]"
+                className="mt-2 w-full rounded-full px-4 py-2 text-[13px]"
               >
                 Analyze pasted skill
-              </button>
+              </Button>
             </div>
           )}
 
