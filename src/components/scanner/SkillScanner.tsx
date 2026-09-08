@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { scanArtifact, type Finding, type ScanResult } from "@/lib/scanner/engine";
 import { ArtifactError, readArtifact, readPastedSkill } from "@/lib/scanner/load";
 import { download, toMarkdown } from "@/lib/scanner/report";
@@ -324,8 +325,8 @@ export function SkillScanner() {
         {/* empty */}
         {phase !== "working" && !result && (
           <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center rounded-[20px] border border-border bg-card/60 px-6 text-center">
-            <span className="flex size-14 items-center justify-center rounded-full border border-border bg-secondary font-mono text-xl text-muted-foreground">
-              ¶
+            <span className="flex size-14 items-center justify-center rounded-full border border-border bg-secondary text-primary">
+              <ShieldCheck className="size-6" strokeWidth={1.5} />
             </span>
             <p className="mt-4 font-display text-lg font-semibold">Ready when you are</p>
             <p className="mt-1 max-w-[40ch] text-[13px] leading-relaxed text-muted-foreground">
