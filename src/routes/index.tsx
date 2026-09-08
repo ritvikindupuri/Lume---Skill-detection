@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDown, LockKeyhole } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SkillScanner } from "@/components/scanner/SkillScanner";
@@ -25,9 +25,10 @@ function Index() {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/75 backdrop-blur-2xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Logo />
-          <Button asChild size="sm" className="rounded-full px-4 shadow-none">
-            <a href="#scanner">Open scanner</a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="rounded-full px-4"><Link to="/login">Sign in</Link></Button>
+            <Button asChild size="sm" className="rounded-full px-4 shadow-none"><Link to="/dashboard">Company dashboard</Link></Button>
+          </div>
         </div>
       </header>
 

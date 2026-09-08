@@ -1,6 +1,14 @@
 export type Severity = "critical" | "high" | "medium" | "low";
 
-export type Layer = "static" | "behavioral" | "provenance" | "network";
+export type Layer =
+  | "prompt"
+  | "agency"
+  | "leakage"
+  | "privacy"
+  | "supply-chain"
+  | "integrity"
+  | "bias"
+  | "resilience";
 
 export interface Rule {
   id: string;
@@ -9,9 +17,7 @@ export interface Rule {
   title: string;
   rationale: string;
   remediation: string;
-  /** Matched against each line of every text file in the artifact. */
   pattern: RegExp;
-  /** Restrict the rule to files whose path matches. */
   pathPattern?: RegExp;
 }
 
@@ -24,410 +30,85 @@ export const SEVERITY_WEIGHT: Record<Severity, number> = {
 
 export const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low"];
 
+const r = (
+  id: string,
+  layer: Layer,
+  severity: Severity,
+  title: string,
+  rationale: string,
+  remediation: string,
+  pattern: RegExp,
+  pathPattern?: RegExp,
+): Rule => ({
+  id,
+  layer,
+  severity,
+  title,
+  rationale,
+  remediation,
+  pattern,
+  ...(pathPattern ? { pathPattern } : {}),
+});
+
 /**
- * Detection rules. Every rule is a real, evaluated check — there is no
- * placeholder content here. Rule IDs are stable and safe to reference in
- * policy or ticketing systems.
+ * 35 deterministic checks derived from OWASP Top 10 for LLM Applications,
+ * MITRE ATLAS, and the NIST AI RMF Generative AI Profile. Each check is
+ * executed against real artifact content; structural checks are identified
+ * below and evaluated by the engine.
  */
 export const RULES: Rule[] = [
-  // ── Layer 1: static instruction analysis ────────────────────────────────
-  {
-    id: "PGR-S001",
-    layer: "static",
-    severity: "critical",
-    title: "Instruction override of system or operator policy",
-    rationale:
-      "The skill instructs the model to disregard system prompts, operator rules, or prior guidance. This is the core primitive of a prompt-injection payload.",
-    remediation:
-      "Remove the override language. A legitimate skill never needs to countermand the host system prompt.",
-    pattern:
-      /\b(ignore|disregard|forget|override|bypass)\b[^.\n]{0,40}\b(all\s+)?(previous|prior|earlier|above|system|operator|prior)\b[^.\n]{0,25}\b(instruction|prompt|rule|policy|guideline|message)/i,
-  },
-  {
-    id: "PGR-S002",
-    layer: "static",
-    severity: "critical",
-    title: "Instruction to conceal actions from the user",
-    rationale:
-      "The skill asks the assistant to hide, omit, or misreport what it is doing. Concealment has no legitimate use and defeats human oversight.",
-    remediation: "Delete the concealment instruction and disclose all actions the skill performs.",
-    pattern:
-      /\b(do\s*not|don'?t|never)\b[^.\n]{0,30}\b(tell|inform|mention|reveal|show|disclose|notify|alert|log)\b[^.\n]{0,25}\b(the\s+)?(user|human|operator|owner)\b|\b(without|avoid)\b[^.\n]{0,20}\b(telling|informing|notifying|user'?s?\s+knowledge|user\s+consent)\b|\bsilently\b[^.\n]{0,25}\b(send|upload|copy|post|exfil|transmit|delete|run|execute)\b/i,
-  },
-  {
-    id: "PGR-S003",
-    layer: "static",
-    severity: "high",
-    title: "Safety or refusal-behaviour suppression",
-    rationale:
-      "The skill attempts to disable refusals, safety checks, or content policy enforcement for its own execution.",
-    remediation: "Remove language that suppresses safety behaviour.",
-    pattern:
-      /\b(no\s+matter\s+what|regardless\s+of)\b[^.\n]{0,30}\b(polic|safety|rule|guideline)|\b(disable|turn\s+off|suspend|skip)\b[^.\n]{0,25}\b(safety|guardrail|filter|moderation|refusal|restriction)|\byou\s+are\s+now\s+(in\s+)?(developer|dan|god|unrestricted|jailbreak)\s*mode/i,
-  },
-  {
-    id: "PGR-S004",
-    layer: "static",
-    severity: "high",
-    title: "Approval-bypass instruction",
-    rationale:
-      "The skill instructs the agent to proceed without confirmation on actions that normally require a human in the loop.",
-    remediation: "Restore explicit confirmation before destructive or outbound actions.",
-    pattern:
-      /\b(without|skip|bypass|no\s+need\s+for|do\s*not\s+ask\s+for)\b[^.\n]{0,25}\b(confirmation|approval|permission|consent|asking)\b|\bauto[-\s]?approve\b/i,
-  },
-  {
-    id: "PGR-S005",
-    layer: "static",
-    severity: "critical",
-    title: "Hidden instruction in HTML comment",
-    rationale:
-      "Instructions inside HTML comments are invisible in rendered markdown but still reach the model. This is a classic smuggling technique.",
-    remediation: "Move all instructions into visible markdown, or remove them.",
-    pattern:
-      /<!--[^>]{0,400}\b(you\s+must|always|ignore|system|instruction|secret|do\s*not\s+tell|send|upload|token|key)\b/i,
-  },
-  {
-    id: "PGR-S006",
-    layer: "static",
-    severity: "critical",
-    title: "Zero-width or bidirectional control characters",
-    rationale:
-      "Invisible Unicode (zero-width joiners, bidi overrides, Unicode tag block) can hide an entirely separate instruction stream from human reviewers.",
-    remediation: "Strip all non-printing control characters from the skill files.",
-    pattern: /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u{E0000}-\u{E007F}]/u,
-  },
-  {
-    id: "PGR-S007",
-    layer: "static",
-    severity: "high",
-    title: "Large opaque base64 blob",
-    rationale:
-      "A long encoded string inside an instruction file typically carries a payload that is unreadable at review time.",
-    remediation: "Replace the encoded blob with its plaintext equivalent, or remove it.",
-    pattern: /(?:^|[^A-Za-z0-9+/])[A-Za-z0-9+/]{120,}={0,2}(?:$|[^A-Za-z0-9+/=])/,
-  },
-  {
-    id: "PGR-S008",
-    layer: "static",
-    severity: "high",
-    title: "Runtime decoding of an embedded payload",
-    rationale:
-      "Decoding base64/hex at runtime and feeding the result to an interpreter hides the executed code from static review.",
-    remediation: "Inline the real command so reviewers can read it.",
-    pattern:
-      /\b(base64\s+(-{1,2}d(ecode)?)|atob\s*\(|from_?base64|b64decode|fromhex|Convert\.FromBase64String)\b/i,
-  },
-  {
-    id: "PGR-S009",
-    layer: "static",
-    severity: "medium",
-    title: "Role-play or persona reframing of the assistant",
-    rationale:
-      "Reframing the assistant's identity is frequently used to detach it from operator policy.",
-    remediation: "Describe the task, not a new identity for the model.",
-    pattern:
-      /\b(you\s+are\s+no\s+longer|pretend\s+(to\s+be|you)|act\s+as\s+if\s+you\s+(have|are)\s+no|from\s+now\s+on\s+you\s+(are|will))\b/i,
-  },
-  {
-    id: "PGR-S010",
-    layer: "static",
-    severity: "medium",
-    title: "Urgency or authority pressure language",
-    rationale:
-      "Manufactured urgency and false authority claims are social-engineering markers used to push an agent past its checks.",
-    remediation: "Remove pressure language; state the task plainly.",
-    pattern:
-      /\b(this\s+is\s+(an\s+)?(urgent|emergency|critical)\b[^.\n]{0,30}\b(must|immediately))|\b(authorized|approved|mandated)\s+by\s+(the\s+)?(admin|administrator|security\s+team|management|anthropic|openai)\b/i,
-  },
-  {
-    id: "PGR-S011",
-    layer: "static",
-    severity: "low",
-    title: "Missing or malformed skill frontmatter",
-    rationale:
-      "A skill without a declared name and description cannot be governed, inventoried, or attributed.",
-    remediation: "Add YAML frontmatter with at least `name` and `description`.",
-    pattern: /^\uFFFF$/, // evaluated structurally in the engine, never line-matched
-    pathPattern: /^\uFFFF$/,
-  },
-
-  // ── Layer 2: behavioral / capability analysis ───────────────────────────
-  {
-    id: "PGR-B001",
-    layer: "behavioral",
-    severity: "critical",
-    title: "Credential and secret file access",
-    rationale:
-      "The skill reads well-known secret locations. Combined with any outbound call this is a direct credential-theft chain.",
-    remediation: "Remove secret-store access, or scope the skill to explicit, non-secret inputs.",
-    pattern:
-      /(\.env(\.[a-z]+)?\b|~\/\.ssh|id_rsa|id_ed25519|\.aws\/credentials|\.kube\/config|\.npmrc|\.netrc|\.git-credentials|keychain|credentials\.json|service[-_]account\.json)/i,
-  },
-  {
-    id: "PGR-B002",
-    layer: "behavioral",
-    severity: "critical",
-    title: "Remote code fetched and piped to a shell",
-    rationale:
-      "`curl … | sh` style chains execute attacker-controlled code that never appears in the reviewed artifact.",
-    remediation: "Vendor the script into the skill and review it, or remove the chain.",
-    pattern:
-      /\b(curl|wget|iwr|Invoke-WebRequest)\b[^\n|]{0,160}\|\s*(sudo\s+)?(ba|z|k|d)?sh\b|\b(curl|wget)\b[^\n]{0,120}&&\s*(chmod\s+\+x|\.\/)/i,
-  },
-  {
-    id: "PGR-B003",
-    layer: "behavioral",
-    severity: "critical",
-    title: "Destructive filesystem or repository operation",
-    rationale: "Irreversible deletion or history rewriting can destroy production data or evidence.",
-    remediation: "Remove the destructive command or gate it behind explicit human approval.",
-    pattern:
-      /\brm\s+-[a-z]*[rf][a-z]*\s+(\/|~|\$HOME|\*)|\bgit\s+push\s+(--force|-f)\b|\bDROP\s+(TABLE|DATABASE|SCHEMA)\b|\bTRUNCATE\s+TABLE\b|\bmkfs\b|\bdd\s+if=.*of=\/dev\//i,
-  },
-  {
-    id: "PGR-B004",
-    layer: "behavioral",
-    severity: "high",
-    title: "Dynamic code execution",
-    rationale:
-      "eval/exec on assembled strings makes the skill's real behaviour undecidable from the source.",
-    remediation: "Replace dynamic execution with explicit, reviewable code paths.",
-    pattern:
-      /\b(eval\s*\(|exec\s*\(|new\s+Function\s*\(|subprocess\.(Popen|call|run)\s*\([^)]*shell\s*=\s*True|child_process|os\.system\s*\(|Invoke-Expression|IEX\s*\()/i,
-  },
-  {
-    id: "PGR-B005",
-    layer: "behavioral",
-    severity: "high",
-    title: "Persistence mechanism",
-    rationale:
-      "Writing to shell profiles, cron, systemd, or git hooks lets the payload survive after the skill run ends.",
-    remediation: "Remove persistence; a skill should be stateless within its invocation.",
-    pattern:
-      /\b(crontab\s+-|\/etc\/cron|systemctl\s+(enable|--user)|launchctl\s+load|\.bashrc|\.zshrc|\.bash_profile|\.profile\b|\.git\/hooks|LaunchAgents|registry\s+add|HKCU\\)/i,
-  },
-  {
-    id: "PGR-B006",
-    layer: "behavioral",
-    severity: "high",
-    title: "Privilege escalation",
-    rationale: "The skill attempts to run with elevated rights beyond its declared scope.",
-    remediation: "Run at least privilege; drop sudo/admin escalation.",
-    pattern: /\b(sudo\s+(-S|su\b|-i\b)|chmod\s+777|setuid|runas\s+\/user:administrator|pkexec)\b/i,
-  },
-  {
-    id: "PGR-B007",
-    layer: "behavioral",
-    severity: "high",
-    title: "Broad environment variable harvesting",
-    rationale:
-      "Dumping the whole environment collects every injected secret in one call, regardless of what the skill needs.",
-    remediation: "Read only the specific variables the skill requires.",
-    pattern:
-      /\b(printenv\b|env\s*\|\s*(curl|nc|base64|grep)|os\.environ\b(?!\s*\[)|process\.env\s*\)|JSON\.stringify\s*\(\s*process\.env)/i,
-  },
-  {
-    id: "PGR-B008",
-    layer: "behavioral",
-    severity: "medium",
-    title: "Undeclared tool or capability request",
-    rationale:
-      "The instruction text asks for capabilities that are not declared in the skill's frontmatter tool scope.",
-    remediation: "Declare every tool the skill uses, or stop using it.",
-    pattern:
-      /\b(use\s+the\s+(bash|shell|terminal|browser|computer)\s+tool|run\s+(a\s+)?(shell|bash)\s+command|execute\s+the\s+following\s+(command|script))\b/i,
-  },
-  {
-    id: "PGR-B009",
-    layer: "behavioral",
-    severity: "high",
-    title: "Reads conversation or agent memory for export",
-    rationale:
-      "Harvesting chat history, memory files, or transcripts is the collection stage of an exfiltration chain.",
-    remediation: "Remove the history read, or keep the data strictly local to the answer.",
-    pattern:
-      /\b(conversation\s+history|chat\s+history|full\s+transcript|previous\s+messages|memory\s+file|\.claude\/|CLAUDE\.md|\.cursor\/|\.config\/[a-z]*ai)\b[^.\n]{0,60}\b(send|post|upload|copy|share|include|attach|transmit)\b/i,
-  },
-  {
-    id: "PGR-B010",
-    layer: "behavioral",
-    severity: "medium",
-    title: "Reverse shell or raw socket listener",
-    rationale: "Interactive remote access has no legitimate place inside a documentation-driven skill.",
-    remediation: "Remove the listener.",
-    pattern:
-      /\b(nc\s+-[a-z]*l[a-z]*\s|ncat\s+.*--exec|bash\s+-i\s*>&\s*\/dev\/tcp|socket\.socket\([^)]*\)[^\n]*connect|telnet\s+\d)/i,
-  },
-  {
-    id: "PGR-B011",
-    layer: "behavioral",
-    severity: "medium",
-    title: "Unrestricted file scan over user directories",
-    rationale:
-      "Recursive searches across home or root directories collect far more than any single task requires.",
-    remediation: "Scope reads to the working directory or explicit paths.",
-    pattern:
-      /\b(find\s+(\/|~|\$HOME)\s|grep\s+-r[a-z]*\s+[^\n]{0,40}\s+(\/|~|\$HOME)\b|ls\s+-[a-zR]*R[a-zR]*\s+(\/|~))/i,
-  },
-
-  // ── Layer 3: provenance & supply chain ──────────────────────────────────
-  {
-    id: "PGR-P001",
-    layer: "provenance",
-    severity: "high",
-    title: "Unpinned dependency installation",
-    rationale:
-      "Installing a package at latest resolves to whatever the registry serves at run time, which is not what was reviewed.",
-    remediation: "Pin exact versions and, where possible, integrity hashes.",
-    pattern:
-      /\b((npm|bun|pnpm|yarn)\s+(i|add|install)|pip\s+install|gem\s+install|go\s+install)\s+(?![^\n]*[@=]\d)[^\n]{1,80}$/i,
-  },
-  {
-    id: "PGR-P002",
-    layer: "provenance",
-    severity: "high",
-    title: "Dependency pulled from a non-registry source",
-    rationale:
-      "Direct git, gist, or pastebin sources bypass registry scanning and can be rewritten after review.",
-    remediation: "Publish the dependency to your registry or vendor it in.",
-    pattern:
-      /\b(pip\s+install\s+git\+|npm\s+i(nstall)?\s+(git\+|https?:\/\/)|gist\.githubusercontent|pastebin\.com|paste\.ee|transfer\.sh|file\.io|anonfiles)/i,
-  },
-  {
-    id: "PGR-P003",
-    layer: "provenance",
-    severity: "medium",
-    title: "Hardcoded credential or API key",
-    rationale:
-      "A live secret embedded in a distributed skill is disclosed to every recipient of the artifact.",
-    remediation: "Move the secret to a runtime secret store and rotate the exposed value.",
-    pattern:
-      /\b(sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{12,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN\s+[A-Z ]*PRIVATE\s+KEY-----)/,
-  },
-  {
-    id: "PGR-P004",
-    layer: "provenance",
-    severity: "medium",
-    title: "Executable or binary artifact bundled with the skill",
-    rationale:
-      "Compiled artifacts cannot be reviewed as text and are a common carrier for the actual payload.",
-    remediation: "Ship source, not binaries, or move the binary behind a signed internal registry.",
-    pattern: /^\uFFFF$/, // evaluated structurally in the engine
-    pathPattern: /\.(exe|dll|so|dylib|bin|jar|pyc|wasm|scpt|app|msi|deb|rpm)$/i,
-  },
-  {
-    id: "PGR-P005",
-    layer: "provenance",
-    severity: "low",
-    title: "Unattributed skill",
-    rationale: "No author, license, or source repository is declared, so the skill cannot be traced.",
-    remediation: "Add author, license, and repository fields to the frontmatter.",
-    pattern: /^\uFFFF$/, // evaluated structurally in the engine
-    pathPattern: /^\uFFFF$/,
-  },
-
-  // ── Layer 4: network posture ────────────────────────────────────────────
-  {
-    id: "PGR-N001",
-    layer: "network",
-    severity: "critical",
-    title: "Outbound transmission of local data",
-    rationale:
-      "The skill sends local file or environment contents to a remote endpoint — the exfiltration stage itself.",
-    remediation: "Remove the upload, or route it through an approved, logged internal service.",
-    pattern:
-      /\b(curl|wget|fetch|requests\.post|axios\.post|http\.post|Invoke-RestMethod)\b[^\n]{0,200}\b(-d\s|--data|@\/|body|json\s*=|-F\s|process\.env|os\.environ|\.env\b|cat\s)/i,
-  },
-  {
-    id: "PGR-N002",
-    layer: "network",
-    severity: "high",
-    title: "Hardcoded raw IP endpoint",
-    rationale:
-      "A literal IP address bypasses DNS-based allowlisting and monitoring and is characteristic of command-and-control.",
-    remediation: "Use an approved, resolvable hostname on your egress allowlist.",
-    pattern: /https?:\/\/(\d{1,3}\.){3}\d{1,3}(:\d+)?/,
-  },
-  {
-    id: "PGR-N003",
-    layer: "network",
-    severity: "high",
-    title: "Anonymising or tunnelling endpoint",
-    rationale: "Tunnels and disposable hosts are used to evade egress inspection and attribution.",
-    remediation: "Remove the tunnel; call approved endpoints directly.",
-    pattern:
-      /\b([a-z0-9-]+\.)?(ngrok\.(io|app|dev)|trycloudflare\.com|localtunnel\.me|loca\.lt|serveo\.net|requestbin|webhook\.site|pipedream\.net|burpcollaborator|oast\.(fun|live|site)|interact\.sh)\b/i,
-  },
-  {
-    id: "PGR-N004",
-    layer: "network",
-    severity: "medium",
-    title: "Data sent to a webhook or chat relay",
-    rationale:
-      "Generic webhook relays are a low-friction drop point for stolen data and are rarely on an egress allowlist.",
-    remediation: "Replace with an approved internal endpoint.",
-    pattern:
-      /https?:\/\/[^\s"']{0,80}(hooks\.slack\.com|discord(app)?\.com\/api\/webhooks|api\.telegram\.org\/bot|zapier\.com\/hooks|hooks\.zapier)/i,
-  },
-  {
-    id: "PGR-N005",
-    layer: "network",
-    severity: "medium",
-    title: "Data-carrying image or link beacon",
-    rationale:
-      "Encoding data in a URL rendered as an image or link exfiltrates silently at render time.",
-    remediation: "Remove the beacon.",
-    pattern:
-      /!\[[^\]]{0,40}\]\(\s*https?:\/\/[^)\s]{0,200}[?&][a-z0-9_]{1,20}=\$?\{?[^)\s]{0,80}\)|<img[^>]{0,200}src\s*=\s*["']https?:\/\/[^"']{0,200}[?&]/i,
-  },
-  {
-    id: "PGR-N006",
-    layer: "network",
-    severity: "medium",
-    title: "Insecure plaintext transport",
-    rationale: "http:// traffic can be read and rewritten in transit.",
-    remediation: "Use https for every external call.",
-    pattern: /http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])[a-z0-9.-]+/i,
-  },
-  {
-    id: "PGR-N007",
-    layer: "network",
-    severity: "medium",
-    title: "TLS verification disabled",
-    rationale: "Skipping certificate checks removes the only defence against interception.",
-    remediation: "Re-enable certificate verification.",
-    pattern:
-      /\b(curl[^\n]{0,60}\s(-k|--insecure)\b|verify\s*=\s*False|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0)/,
-  },
-  {
-    id: "PGR-N008",
-    layer: "network",
-    severity: "low",
-    title: "Undeclared external endpoint",
-    rationale:
-      "Every external host the skill contacts should be reviewable against your egress allowlist.",
-    remediation: "Document each endpoint and confirm it is allowlisted.",
-    pattern: /^\uFFFF$/, // evaluated structurally in the engine (endpoint inventory)
-    pathPattern: /^\uFFFF$/,
-  },
+  r("ATT-001", "prompt", "critical", "Hidden instruction directive", "Instructions concealed in comments can reach the model while evading human review.", "Make every operative instruction visible or remove it.", /<!--[^>]{0,500}\b(ignore|always|must|system|secret|send|upload|execute|instruction)\b/i),
+  r("ATT-002", "prompt", "critical", "System or operator instruction override", "Attempts to supersede higher-priority instructions are direct prompt injection.", "Remove all instruction-override language.", /\b(ignore|disregard|forget|override|bypass)\b[^.\n]{0,45}\b(previous|prior|above|system|operator|developer)\b[^.\n]{0,30}\b(instruction|prompt|rule|policy|message)/i),
+  r("ATT-003", "prompt", "critical", "Delegated remote instruction loading", "Fetching external text and treating it as instructions gives an unreviewed party control of the agent.", "Bundle and review required instructions locally; never execute fetched prose as policy.", /\b(fetch|download|read|retrieve|load)\b[^.\n]{0,80}\b(url|website|remote|endpoint|file)\b[^.\n]{0,80}\b(follow|execute|obey|treat|use)\b[^.\n]{0,30}\b(instruction|prompt|command)/i),
+  r("ATT-004", "prompt", "high", "Instruction payload disguised as an example", "Few-shot examples can smuggle commands that the model is told to reproduce as live behavior.", "Clearly mark examples as inert and remove override or execution language from them.", /\b(example|sample|demonstration)\b[^\n]{0,80}\b(copy exactly|repeat verbatim|must output|execute this|follow these instructions)/i),
+  r("ATT-005", "prompt", "high", "Dormant conditional trigger", "A secret phrase, date, or user attribute can activate hidden behavior after review.", "Remove covert triggers and document legitimate conditions explicitly.", /\b(if|when|whenever)\b[^\n]{0,80}\b(keyword|phrase|date|time|user|hostname|environment)\b[^\n]{0,100}\b(secretly|instead|override|ignore|activate|trigger|payload)/i),
+  r("ATT-006", "prompt", "high", "Cross-skill instruction tampering", "Changing other skills or shared agent instructions creates cross-context compromise.", "Restrict changes to this skill and require explicit review for shared configuration.", /\b(modify|rewrite|replace|override|delete|patch)\b[^\n]{0,60}\b(other|another|installed|global)\b[^\n]{0,40}\b(skill|SKILL\.md|CLAUDE\.md|instruction|prompt)/i),
+  r("ATT-007", "agency", "critical", "Unscoped command execution", "Shell or dynamic execution can turn natural-language instructions into arbitrary code.", "Use allowlisted operations in a sandbox and require approval.", /\b(eval\s*\(|exec\s*\(|new\s+Function\s*\(|os\.system\s*\(|child_process|subprocess\.(Popen|call|run)[^\n]*shell\s*=\s*True|Invoke-Expression|IEX\s*\()/i),
+  r("ATT-008", "agency", "critical", "Destructive operation", "Irreversible deletion, disk writes, or history rewrites can destroy data and evidence.", "Remove the operation or place it behind explicit human approval and a dry run.", /\brm\s+-[a-z]*[rf][a-z]*\s+(\/|~|\$HOME|\*)|\bgit\s+push\s+(--force|-f)\b|\bDROP\s+(TABLE|DATABASE|SCHEMA)\b|\bTRUNCATE\s+TABLE\b|\bmkfs\b|\bdd\s+if=.*of=\/dev\//i),
+  r("ATT-009", "agency", "high", "Autonomous network egress", "Unapproved outbound traffic can expose data or retrieve mutable instructions.", "Restrict egress to documented, allowlisted HTTPS hosts.", /\b(curl|wget|fetch\s*\(|axios\.|requests\.(get|post)|Invoke-WebRequest|Invoke-RestMethod)\b[^\n]{0,180}https?:\/\//i),
+  r("ATT-010", "agency", "critical", "Privilege escalation", "Elevated execution exceeds normal skill scope and increases blast radius.", "Run with least privilege and remove elevation requests.", /\b(sudo\s+(-S|su\b|-i\b)|pkexec|setuid|chmod\s+777|runas\s+\/user:administrator)\b/i),
+  r("ATT-011", "resilience", "medium", "Unbounded loop or recursive invocation", "Unbounded retries or self-invocation can exhaust tokens, compute, or tool quotas.", "Add a strict iteration, time, and cost limit.", /\b(while\s+true|for\s*\(\s*;;\s*\)|retry\s+(forever|indefinitely|until\s+success)|recursively\s+(call|invoke|repeat)|never\s+stop)\b/i),
+  r("ATT-012", "agency", "critical", "Human approval bypass", "Skipping confirmation removes the control point before consequential actions.", "Require explicit approval for destructive, financial, outbound, or privileged actions.", /\b(without|skip|bypass|no\s+need\s+for|do\s*not\s+ask\s+for)\b[^.\n]{0,30}\b(confirmation|approval|permission|consent|review)|\bauto[-\s]?approve\b/i),
+  r("ATT-013", "agency", "high", "Cross-boundary file access", "Absolute paths and traversal can expose data outside the declared workspace.", "Constrain file access to the working directory and reject traversal.", /(?:^|[\s"'`])(\.\.\/|\/etc\/|\/home\/|\/Users\/|~\/|\$HOME\/)[^\s"'`]*/i),
+  r("ATT-014", "leakage", "critical", "Covert exfiltration channel", "URL parameters, DNS, or rendered beacons can transmit data without an obvious upload.", "Remove the channel and use an approved, logged data path.", /(!\[[^\]]*\]\(https?:\/\/[^)]+[?&][^=]+=\$?\{?[^)]+\)|<img[^>]+src=["']https?:\/\/[^"']+[?&]|\b(nslookup|dig)\s+\$?\{?[^\s]+\}?\.)/i),
+  r("ATT-015", "leakage", "critical", "Credential or secret harvesting", "Reading secret stores is a common collection stage before exfiltration.", "Remove secret access and accept only explicit, scoped inputs.", /(\.env(?:\.[a-z]+)?\b|~\/\.ssh|id_rsa|id_ed25519|\.aws\/credentials|\.kube\/config|\.npmrc|\.netrc|\.git-credentials|service[-_]account\.json|keychain)/i),
+  r("ATT-016", "leakage", "high", "Conversation or context telemetry", "Exporting full prompts, messages, or context can disclose confidential company information.", "Log only minimal, redacted operational metadata to approved systems.", /\b(send|upload|post|transmit|log)\b[^.\n]{0,80}\b(full\s+)?(conversation|chat\s+history|transcript|prompt|context|previous\s+messages)\b/i),
+  r("ATT-017", "privacy", "high", "Cross-session data reuse", "Persisting one person's context for another can cause tenant or user data leakage.", "Partition storage by organization and user; expire session data.", /\b(reuse|share|load|retrieve|remember|persist)\b[^.\n]{0,70}\b(previous|another|other)\b[^.\n]{0,35}\b(user|customer|session|tenant)('?s)?\b[^.\n]{0,40}\b(data|context|history|result)/i),
+  r("ATT-018", "leakage", "medium", "Broad sensitive file discovery", "Recursive scans of home or root directories collect more data than a skill needs.", "Scope file reads to explicit workspace paths.", /\b(find\s+(\/|~|\$HOME)\s|grep\s+-r[a-z]*\s+[^\n]{0,50}\s+(\/|~|\$HOME)|glob\s*\([^)]*\*\*\/\*|ls\s+-[a-zR]*R[a-zR]*\s+(\/|~))/i),
+  r("ATT-019", "privacy", "high", "Excessive personal or health data collection", "Collecting sensitive personal data without necessity violates data-minimization principles.", "Collect only fields required for the stated purpose and obtain consent.", /\b(collect|extract|gather|scrape|store|record)\b[^.\n]{0,80}\b(SSN|social\s+security|passport|medical|health\s+record|diagnosis|biometric|sexual\s+orientation|religion|ethnicity|home\s+address|date\s+of\s+birth)\b/i),
+  r("ATT-020", "privacy", "medium", "Personal data processing without retention limits", "Personal data without purpose and retention boundaries can be kept indefinitely or reused.", "Declare purpose, retention period, deletion, and access boundaries.", /\b(store|retain|archive|save|remember)\b[^.\n]{0,70}\b(personal|customer|employee|patient|user)\b[^.\n]{0,30}\b(data|information|profile|record)\b(?![^\n]{0,90}\b(delete|expire|retention|consent|purpose)\b)/i),
+  r("ATT-021", "privacy", "high", "Re-identification of anonymized data", "Joining quasi-identifiers can reverse anonymization and expose individuals.", "Prohibit re-identification and use privacy-preserving aggregation.", /\b(re-?identify|de-?anonymi[sz]e|reverse\s+anonymi[sz]ation|link\s+anonymous\s+records|correlate\s+identifiers)\b/i),
+  r("ATT-022", "privacy", "high", "Third-party personal data sharing without consent", "Sending personal data to another service without consent violates user expectations and privacy controls.", "Add informed consent and an approved processor agreement, or keep data local.", /\b(send|share|upload|transmit|provide)\b[^.\n]{0,70}\b(personal|customer|employee|patient|user)\b[^.\n]{0,30}\b(data|information|record)\b[^.\n]{0,70}\b(third[- ]party|vendor|partner|external\s+(api|service))\b/i),
+  r("ATT-023", "supply-chain", "critical", "Unpinned remote dependency", "Runtime installation from a mutable source can execute code that was never reviewed.", "Pin an exact version and integrity hash, or vendor reviewed source.", /\b((npm|bun|pnpm|yarn)\s+(i|add|install)|pip\s+install|gem\s+install|go\s+install)\s+(?![^\n]*[@=]\d)[^\n]{1,100}|\b(curl|wget)\b[^\n|]{0,160}\|\s*(sudo\s+)?(ba|z|k|d)?sh\b/i),
+  r("ATT-024", "supply-chain", "high", "Lookalike package reference", "Package names that mimic common dependencies are a known supply-chain delivery technique.", "Verify the package against the official registry and publisher.", /\b(reqeusts|requestss|lodahs|reactt|expresss|numpyy|pytorch-|openaii|anthropicc|colourama|python-dateutils)\b/i),
+  r("ATT-025", "supply-chain", "critical", "Self-modifying skill or agent configuration", "A skill that rewrites its own or global instructions can become persistent after approval.", "Make skills immutable at runtime and require reviewed updates.", /\b(write|append|modify|rewrite|patch|replace)\b[^\n]{0,70}\b(SKILL\.md|CLAUDE\.md|\.claude\/|agent\s+(config|instruction)|system\s+prompt)\b/i),
+  r("ATT-026", "supply-chain", "critical", "Obfuscated payload decoding", "Encoded payloads conceal the behavior that will actually execute.", "Replace encoded content with readable, reviewable source.", /\b(base64\s+(-{1,2}d(?:ecode)?)|atob\s*\(|b64decode|fromhex|Convert\.FromBase64String|rot13)\b|(?:^|[^A-Za-z0-9+/])[A-Za-z0-9+/]{160,}={0,2}(?:$|[^A-Za-z0-9+/=])/i),
+  r("ATT-027", "supply-chain", "medium", "Unverifiable artifact provenance", "Missing authorship and licensing make ownership, review, and incident response harder.", "Declare an author, license, source repository, and release checksum.", /^\uFFFF$/, /^\uFFFF$/),
+  r("ATT-028", "supply-chain", "high", "Time-bomb or dormant backdoor", "Date and environment gates can conceal malicious behavior until after approval.", "Remove dormant activation logic and document all conditions.", /\b(after|before|on)\s+\d{4}[-/]\d{1,2}[-/]\d{1,2}\b[^\n]{0,90}\b(execute|activate|run|delete|send)|\b(time[- ]bomb|dormant\s+(payload|backdoor))\b/i),
+  r("ATT-029", "integrity", "medium", "Unsourced authoritative claims", "Directing the model to assert facts as certain without sources increases confabulation risk.", "Require attributable sources and calibrated uncertainty.", /\b(always\s+(state|claim|answer)|present\s+as\s+fact|assert\s+with\s+certainty|never\s+mention\s+uncertainty)\b[^\n]{0,90}\b(without\s+(sources|citation|verification)|even\s+if\s+unsure|regardless\s+of\s+evidence)/i),
+  r("ATT-030", "integrity", "high", "High-stakes advice without verification", "Medical, legal, or financial output without qualified review can cause material harm.", "Require authoritative sources, uncertainty disclosure, and qualified human review.", /\b(medical|diagnos|treatment|legal\s+advice|investment|financial\s+advice|credit\s+decision)\b[^\n]{0,120}\b(no\s+need\s+to|without)\b[^\n]{0,50}\b(verify|doctor|lawyer|advisor|professional|source|disclaimer|review)/i),
+  r("ATT-031", "integrity", "medium", "Fabricated tool or source instruction", "Telling the model to invent tools, citations, or API responses creates false evidence and failed calls.", "Use only declared tools and verifiable sources; fail clearly when unavailable.", /\b(invent|fabricate|make\s+up|simulate)\b[^.\n]{0,50}\b(citation|source|reference|API|tool|function|result|response)\b|\b(if\s+the\s+(tool|source|API)\s+(doesn'?t|does\s+not)\s+exist)[^.\n]{0,60}\b(pretend|invent|create)/i),
+  r("ATT-032", "bias", "medium", "Demographic stereotype in output guidance", "Hard-coded demographic assumptions can systematically skew generated output.", "Use neutral attributes and test outcomes across relevant groups.", /\b(all|most|typically|naturally)\b[^.\n]{0,35}\b(women|men|girls|boys|elderly|immigrants|disabled|[A-Za-z]+\s+people)\b[^.\n]{0,45}\b(are|prefer|cannot|should|good\s+at|bad\s+at|less|more)\b/i),
+  r("ATT-033", "bias", "high", "Protected-attribute decision rule", "Using protected traits in hiring, credit, housing, healthcare, or access decisions creates discrimination risk.", "Remove protected attributes from the decision rule and require fairness review.", /\b(reject|exclude|deny|rank\s+lower|prefer|filter\s+out|disqualify)\b[^.\n]{0,70}\b(race|ethnicity|gender|sex|religion|disability|age|pregnan|nationality|sexual\s+orientation)\b/i),
+  r("ATT-034", "resilience", "medium", "Unbounded context amplification", "Recursive expansion and unlimited ingestion can create denial of service and unpredictable cost.", "Set hard limits on files, bytes, tokens, retries, and recursion depth.", /\b(read|load|include|process|summarize)\b[^.\n]{0,70}\b(all|every|entire|unlimited)\b[^.\n]{0,50}\b(file|repository|internet|web|history|document)\b|\b(expand|repeat)\b[^.\n]{0,40}\b(recursively|until\s+complete|without\s+limit)/i),
+  r("ATT-035", "prompt", "critical", "Guardrail-bypass framing", "Fictional or research framing is being used to suppress safety boundaries.", "Remove the bypass request and keep safety policy active for every context.", /\b(for\s+(research|educational|fictional|hypothetical)\s+purposes|in\s+a\s+fictional\s+scenario)\b[^.\n]{0,100}\b(ignore|bypass|disable|circumvent|without)\b[^.\n]{0,40}\b(safety|policy|restriction|guardrail|filter|refusal)/i),
 ];
 
 export const LAYER_LABEL: Record<Layer, string> = {
-  static: "Static analysis",
-  behavioral: "Behavioral trace",
-  provenance: "Provenance",
-  network: "Network posture",
+  prompt: "Prompt integrity",
+  agency: "Agency & tools",
+  leakage: "Data leakage",
+  privacy: "Privacy",
+  "supply-chain": "Supply chain",
+  integrity: "Output integrity",
+  bias: "Bias & fairness",
+  resilience: "Resilience",
 };
 
-/** Rule IDs evaluated structurally by the engine rather than by line matching. */
-export const STRUCTURAL_RULE_IDS = ["PGR-S011", "PGR-P004", "PGR-P005", "PGR-N008"] as const;
+export const STRUCTURAL_RULE_IDS = ["ATT-027"] as const;
 
-export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(
-  RULES.map((r) => [r.id, r]),
-);
+export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
 
-/** Rules evaluated by line-matching. */
 export const LINE_RULES = RULES.filter(
-  (r) => !(STRUCTURAL_RULE_IDS as readonly string[]).includes(r.id),
+  (rule) => !(STRUCTURAL_RULE_IDS as readonly string[]).includes(rule.id),
 );
