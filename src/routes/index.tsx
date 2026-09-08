@@ -112,9 +112,9 @@ function Index() {
                   ready
                 </span>
               </div>
-              <div className="relative h-[340px] overflow-hidden">
+              <div className="relative overflow-hidden">
                 <div className="pointer-events-none absolute inset-x-0 h-[2px] animate-scanline bg-signal/60" />
-                <div className="space-y-1 px-4 py-4 font-mono text-[12px]">
+                <div className="space-y-1 px-4 py-5 font-mono text-[12px]">
                   {LAYER_ORDER.map((layer, i) => (
                     <div
                       key={layer}
