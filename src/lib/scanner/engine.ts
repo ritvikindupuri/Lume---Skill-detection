@@ -51,6 +51,26 @@ export interface ScanResult {
   rawScore: number;
   verdict: Verdict;
   policy: RiskConfig;
+  ai?: { model: string; findings: number };
+}
+
+export function mergeAiFindings(result: ScanResult, aiFindings: Finding[], model: string): ScanResult {
+  const existing = new Set(result.findings.map((finding) => `${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
+  const novel = aiFindings.filter((finding) => !existing.has(`${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
+  const findings = [...result.findings, ...novel].sort(
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || a.file.localeCompare(b.file) || a.line - b.line,
+  );
+  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+  for (const finding of findings) counts[finding.severity] += 1;
+  let raw = 0;
+  for (const severity of SEVERITY_ORDER) {
+    for (let i = 0; i < counts[severity]; i++) raw += SEVERITY_WEIGHT[severity] / (1 + i * 0.55);
+  }
+  const rawScore = Math.min(100, Math.round(raw));
+  const { acceptableScore: acceptable, maliciousScore: malicious, blockOnCritical } = result.policy;
+  const score = Math.round(rawScore <= acceptable ? (rawScore / Math.max(1, acceptable)) * 17 : rawScore < malicious ? 18 + ((rawScore - acceptable) / (malicious - acceptable)) * 36 : 55 + ((rawScore - malicious) / Math.max(1, 100 - malicious)) * 45);
+  const verdict: Verdict = (blockOnCritical && counts.critical > 0) || rawScore >= malicious ? "malicious" : rawScore >= acceptable ? "suspicious" : "clean";
+  return { ...result, findings, counts, rawScore, score, verdict, ai: { model, findings: novel.length } };
 }
 
 export interface RiskConfig {

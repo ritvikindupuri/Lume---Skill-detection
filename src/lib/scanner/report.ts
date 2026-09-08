@@ -3,12 +3,13 @@ import type { ScanResult } from "./engine";
 
 export function toMarkdown(r: ScanResult): string {
   const lines: string[] = [];
-  lines.push(`# Attest skill security report`);
+  lines.push(`# Aperture skill security report`);
   lines.push("");
   lines.push(`- Artifact: \`${r.artifactName}\``);
   lines.push(`- SHA-256: \`${r.sha256}\``);
   lines.push(`- Scanned: ${r.scannedAt} (${r.durationMs} ms)`);
   lines.push(`- Rules evaluated: ${r.rulesEvaluated}`);
+  lines.push(`- AI review: ${r.ai ? `${r.ai.model} · ${r.ai.findings} additional finding(s)` : "not run"}`);
   lines.push(`- Verdict: **${r.verdict.toUpperCase()}** · policy-adjusted risk score ${r.score}/100`);
   lines.push(`- Inherent score: ${r.rawScore}/100 · review at ${r.policy.acceptableScore} · block at ${r.policy.maliciousScore}`);
   lines.push(
