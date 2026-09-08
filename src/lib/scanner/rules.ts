@@ -95,7 +95,7 @@ export const RULES: Rule[] = [
     rationale:
       "Invisible Unicode (zero-width joiners, bidi overrides, Unicode tag block) can hide an entirely separate instruction stream from human reviewers.",
     remediation: "Strip all non-printing control characters from the skill files.",
-    pattern: /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\uE0000-\uE007F]/,
+    pattern: /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u{E0000}-\u{E007F}]/u,
   },
   {
     id: "PGR-S007",
