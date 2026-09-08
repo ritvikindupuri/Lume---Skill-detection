@@ -236,18 +236,6 @@ export type Database = {
         Args: { _name: string; _slug: string }
         Returns: string
       }
-      has_organization_role: {
-        Args: {
-          _organization_id: string
-          _roles: Database["public"]["Enums"]["organization_role"][]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_organization_member: {
-        Args: { _organization_id: string; _user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       organization_role: "admin" | "analyst" | "viewer"
