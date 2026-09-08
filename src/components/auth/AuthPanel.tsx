@@ -30,8 +30,7 @@ export function AuthPanel() {
   const google = async () => {
     setBusy(true);
     setMessage(null);
-    window.sessionStorage.setItem("attest-next", "/dashboard");
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
     if (result.error) {
       setBusy(false);
       setMessage(result.error.message);
