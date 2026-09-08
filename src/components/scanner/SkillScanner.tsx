@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { scanArtifact, type Finding, type ScanResult } from "@/lib/scanner/engine";
+import { mergeAiFindings, scanArtifact, type Finding, type ScanResult } from "@/lib/scanner/engine";
+import { analyzeSkillWithAi } from "@/lib/ai-scan.functions";
 import { ArtifactError, readArtifact, readPastedSkill } from "@/lib/scanner/load";
 import { download, toMarkdown } from "@/lib/scanner/report";
 import { LAYER_LABEL, RULES, SEVERITY_ORDER, type Severity } from "@/lib/scanner/rules";
@@ -30,6 +32,7 @@ function formatBytes(n: number) {
 }
 
 export function SkillScanner() {
+  const analyzeWithAi = useServerFn(analyzeSkillWithAi);
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +52,14 @@ export function SkillScanner() {
       setOpenFinding(null);
       try {
         const artifact = await load();
-        const scan = await scanArtifact(artifact.name, artifact.files);
-        setResult(scan);
+        const deterministic = await scanArtifact(artifact.name, artifact.files);
+        const content = artifact.files.filter((file) => file.text !== null).map((file) => `--- FILE: ${file.path} ---\n${file.text}`).join("\n\n").slice(0, 500_000);
+        const ai = await analyzeWithAi({ data: {
+          artifactName: artifact.name,
+          content,
+          deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file, line, evidence }) => ({ ruleId, title, severity, file, line, evidence })),
+        } });
+        setResult(mergeAiFindings(deterministic, ai.findings, ai.model));
         setPhase("done");
       } catch (e) {
         setError(
@@ -63,7 +72,7 @@ export function SkillScanner() {
         setPhase("idle");
       }
     },
-    [],
+    [analyzeWithAi],
   );
 
   const onFiles = useCallback(
@@ -195,7 +204,7 @@ export function SkillScanner() {
           )}
 
           <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-            Analysis runs entirely in this browser. Artifact bytes are never uploaded.
+            Files are checked locally, then skill text is sent securely to Lovable AI for advanced intent analysis. Files are not retained by Aperture.
           </p>
         </div>
 
@@ -280,7 +289,7 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `attest-report-${result.sha256.slice(0, 8)}.md`,
+                  `aperture-report-${result.sha256.slice(0, 8)}.md`,
                   toMarkdown(result),
                   "text/markdown",
                 )
@@ -294,7 +303,7 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `attest-report-${result.sha256.slice(0, 8)}.json`,
+                  `aperture-report-${result.sha256.slice(0, 8)}.json`,
                   JSON.stringify(result, null, 2),
                   "application/json",
                 )
@@ -332,7 +341,7 @@ export function SkillScanner() {
             <p className="mt-4 font-display text-lg font-semibold">Ready when you are</p>
             <p className="mt-1 max-w-[40ch] text-[13px] leading-relaxed text-muted-foreground">
               Findings appear here, grouped by severity, the moment a scan completes. Nothing is shown
-              until a real skill is analyzed against all {RULES.length} rules.
+              until a real skill is analyzed against all {RULES.length} rules and GPT’s intent-aware review.
             </p>
             <div className="mt-5 flex items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -379,8 +388,8 @@ export function SkillScanner() {
                 </span>
                 <p className="mt-4 font-display text-lg font-semibold">No rule matched</p>
                 <p className="mt-1 max-w-[44ch] text-[13px] text-muted-foreground">
-                  All {result.rulesEvaluated} rules were evaluated against {result.files.length}{" "}
-                  file(s) and none matched. A clean scan is not a guarantee — review the instruction
+                   All {result.rulesEvaluated} rules and GPT review were evaluated against {result.files.length}{" "}
+                   file(s) and none matched. A clean scan is not a guarantee — review the instruction
                   text before granting tool scope.
                 </p>
               </div>

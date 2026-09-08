@@ -12,6 +12,8 @@ import { DEFAULT_RISK_CONFIG, scanArtifact, type RiskConfig, type ScanResult } f
 import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
+import { analyzeSkillWithAi } from "@/lib/ai-scan.functions";
+import { mergeAiFindings } from "@/lib/scanner/engine";
 
 type Workspace = Awaited<ReturnType<typeof getWorkspace>>;
 type HistoryScan = Workspace["scans"][number];
@@ -40,6 +42,7 @@ export function CompanyDashboard() {
   const createWorkspaceFn = useServerFn(createWorkspace);
   const updateSettingsFn = useServerFn(updateRiskSettings);
   const saveScanFn = useServerFn(saveScan);
+  const analyzeWithAi = useServerFn(analyzeSkillWithAi);
   const inputRef = useRef<HTMLInputElement>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +106,14 @@ export function CompanyDashboard() {
     try {
       for (const file of Array.from(files)) {
         const artifact = await readArtifact([file]);
-        const result = await scanArtifact(artifact.name, artifact.files, policy);
+        const deterministic = await scanArtifact(artifact.name, artifact.files, policy);
+        const content = artifact.files.filter((item) => item.text !== null).map((item) => `--- FILE: ${item.path} ---\n${item.text}`).join("\n\n").slice(0, 500_000);
+        const ai = await analyzeWithAi({ data: {
+          artifactName: artifact.name,
+          content,
+          deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file: findingFile, line, evidence }) => ({ ruleId, title, severity, file: findingFile, line, evidence })),
+        } });
+        const result = mergeAiFindings(deterministic, ai.findings, ai.model);
         completed.push(result);
         await saveScanFn({ data: {
           organizationId: workspace.organization.id,
@@ -155,7 +165,7 @@ export function CompanyDashboard() {
       </header>
       <main className="mx-auto max-w-7xl px-5 py-10 sm:py-14">
         <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-          <div><p className="text-sm font-medium text-primary">Security workspace</p><h1 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">Risk, without the noise.</h1><p className="mt-3 text-muted-foreground">Real results from {RULES.length} deterministic checks. No sample findings.</p></div>
+          <div><p className="text-sm font-medium text-primary">Security workspace</p><h1 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">Risk, without the noise.</h1><p className="mt-3 text-muted-foreground">{RULES.length} deterministic checks plus the strongest GPT intent review. No sample findings.</p></div>
           <input ref={inputRef} type="file" multiple accept=".md,.txt,.json,.yaml,.yml,.zip,.py,.js,.ts,.sh" className="hidden" onChange={(event) => void scanFiles(event.target.files)} />
           <Button className="h-11 rounded-full px-6" disabled={scanning} onClick={() => inputRef.current?.click()}>{scanning ? <LoaderCircle className="animate-spin" /> : <Upload />} {scanning ? "Analyzing…" : "Scan multiple skills"}</Button>
         </div>

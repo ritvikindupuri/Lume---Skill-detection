@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { streamText } from "ai";
 import { z } from "zod";
-import type { Finding, Layer, Severity } from "./scanner/engine";
+import type { Finding } from "./scanner/engine";
+import type { Layer, Severity } from "./scanner/rules";
 
 const inputSchema = z.object({
   artifactName: z.string().min(1).max(255),
@@ -30,24 +31,28 @@ function normalizeFindings(value: unknown): Finding[] {
   return value.findings.slice(0, 30).flatMap((item, index) => {
     if (!item || typeof item !== "object") return [];
     const record = item as Record<string, unknown>;
-    const severity = typeof record.severity === "string" && allowedSeverities.has(record.severity as Severity)
-      ? record.severity as Severity : null;
-    const layer = typeof record.layer === "string" && allowedLayers.has(record.layer as Layer)
-      ? record.layer as Layer : null;
-    if (!severity || !layer || typeof record.title !== "string" || typeof record.evidence !== "string") return [];
-    const file = typeof record.file === "string" ? record.file.slice(0, 500) : "SKILL.md";
-    const line = typeof record.line === "number" && Number.isFinite(record.line) ? Math.max(1, Math.round(record.line)) : 1;
+    const severityValue = record["severity"];
+    const layerValue = record["layer"];
+    const titleValue = record["title"];
+    const evidenceValue = record["evidence"];
+    const severity = typeof severityValue === "string" && allowedSeverities.has(severityValue as Severity) ? severityValue as Severity : null;
+    const layer = typeof layerValue === "string" && allowedLayers.has(layerValue as Layer) ? layerValue as Layer : null;
+    if (!severity || !layer || typeof titleValue !== "string" || typeof evidenceValue !== "string") return [];
+    const fileValue = record["file"];
+    const lineValue = record["line"];
+    const file = typeof fileValue === "string" ? fileValue.slice(0, 500) : "SKILL.md";
+    const line = typeof lineValue === "number" && Number.isFinite(lineValue) ? Math.max(1, Math.round(lineValue)) : 1;
     return [{
       key: `GPT-${String(index + 1).padStart(3, "0")}:${file}:${line}`,
       ruleId: `GPT-${String(index + 1).padStart(3, "0")}`,
-      title: record.title.slice(0, 200),
+      title: titleValue.slice(0, 200),
       severity,
       layer,
-      rationale: typeof record.rationale === "string" ? record.rationale.slice(0, 800) : "The instruction creates an unsafe or deceptive behavior pattern.",
-      remediation: typeof record.remediation === "string" ? record.remediation.slice(0, 800) : "Remove or strictly constrain this behavior before deployment.",
+      rationale: typeof record["rationale"] === "string" ? record["rationale"].slice(0, 800) : "The instruction creates an unsafe or deceptive behavior pattern.",
+      remediation: typeof record["remediation"] === "string" ? record["remediation"].slice(0, 800) : "Remove or strictly constrain this behavior before deployment.",
       file,
       line,
-      evidence: record.evidence.replace(/\s+/g, " ").trim().slice(0, 220),
+      evidence: evidenceValue.replace(/\s+/g, " ").trim().slice(0, 220),
     }];
   });
 }
