@@ -51,6 +51,12 @@ export interface ScanResult {
   verdict: Verdict;
 }
 
+function rule(id: string) {
+  const r = RULES_BY_ID[id];
+  if (!r) throw new Error(`Unknown rule ${id}`);
+  return r;
+}
+
 const MAX_EVIDENCE = 220;
 const MAX_FINDINGS_PER_RULE_FILE = 5;
 
@@ -64,11 +70,11 @@ export function parseFrontmatter(text: string) {
   const meta: ScanResult["metadata"] = {};
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
   if (!match) return { meta, present: false };
-  for (const raw of match[1].split(/\r?\n/)) {
+  for (const raw of (match[1] ?? "").split(/\r?\n/)) {
     const kv = /^([A-Za-z_-]+)\s*:\s*(.*)$/.exec(raw.trim());
     if (!kv) continue;
-    const key = kv[1].toLowerCase();
-    const value = kv[2].replace(/^["']|["']$/g, "").trim();
+    const key = (kv[1] ?? "").toLowerCase();
+    const value = (kv[2] ?? "").replace(/^["']|["']$/g, "").trim();
     if (!value) continue;
     if (key === "name") meta.name = value;
     else if (key === "description") meta.description = value;
@@ -87,7 +93,7 @@ function extractHosts(text: string): string[] {
   const hosts: string[] = [];
   const re = /https?:\/\/([A-Za-z0-9.-]+(?::\d+)?)/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) hosts.push(m[1].toLowerCase());
+  while ((m = re.exec(text))) hosts.push((m[1] ?? "").toLowerCase());
   return hosts;
 }
 
@@ -122,7 +128,7 @@ export async function scanArtifact(
 
   for (const file of files) {
     if (file.text === null) {
-      const binaryRule = RULES_BY_ID["PGR-P004"];
+      const binaryRule = rule("PGR-P004");
       if (binaryRule.pathPattern?.test(file.path)) {
         push({
           ruleId: binaryRule.id,
@@ -147,7 +153,7 @@ export async function scanArtifact(
     const perRuleCount = new Map<string, number>();
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i] ?? "";
       if (!line.trim()) continue;
       for (const rule of LINE_RULES) {
         if (rule.pathPattern && !rule.pathPattern.test(file.path)) continue;
@@ -173,7 +179,7 @@ export async function scanArtifact(
   // ── structural checks ──────────────────────────────────────────────────
   if (skillFile) {
     if (!frontmatterPresent || !meta.name || !meta.description) {
-      const r = RULES_BY_ID["PGR-S011"];
+      const r = rule("PGR-S011");
       push({
         ruleId: r.id,
         title: r.title,
@@ -189,7 +195,7 @@ export async function scanArtifact(
       });
     }
     if (!meta.author && !meta.license) {
-      const r = RULES_BY_ID["PGR-P005"];
+      const r = rule("PGR-P005");
       push({
         ruleId: r.id,
         title: r.title,
@@ -209,7 +215,7 @@ export async function scanArtifact(
     .sort((a, b) => b.occurrences - a.occurrences);
 
   if (endpoints.length > 0) {
-    const r = RULES_BY_ID["PGR-N008"];
+    const r = rule("PGR-N008");
     push({
       ruleId: r.id,
       title: r.title,
