@@ -1,23 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Logo, LogoMark } from "@/components/Logo";
+import { ArrowDown, LockKeyhole } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { SkillScanner } from "@/components/scanner/SkillScanner";
-import { LAYER_LABEL, RULES, type Layer } from "@/lib/scanner/rules";
+import { Button } from "@/components/ui/button";
+import { RULES } from "@/lib/scanner/rules";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Paragraph — Malicious Claude Skill Detection for Enterprises" },
-      {
-        name: "description",
-        content:
-          "Paragraph scans Claude skills for prompt injection, exfiltration, and supply-chain risk across four analysis layers, and returns an auditable verdict before the skill ships.",
-      },
-      { property: "og:title", content: "Paragraph — Skill Forensics" },
-      {
-        property: "og:description",
-        content:
-          "Static, behavioral, provenance and network analysis of Claude skills. Auditable verdicts, exportable reports, nothing leaves the browser.",
-      },
+      { title: "Attest — Claude Skill Security" },
+      { name: "description", content: "Scan Claude skills for hidden instructions, unsafe behavior, dependency risk, and data exfiltration before they run." },
+      { property: "og:title", content: "Attest — Claude Skill Security" },
+      { property: "og:description", content: "Know what a Claude skill will do before you trust it." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -25,227 +19,79 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const LAYER_ORDER: Layer[] = ["static", "behavioral", "provenance", "network"];
-
-const LAYER_BLURB: Record<Layer, string> = {
-  static:
-    "Line-level instruction parse: override language, concealment, hidden comments, invisible Unicode, encoded payloads.",
-  behavioral:
-    "Capability reasoning over the commands a skill can trigger — secret reads, remote execution, persistence, destructive operations.",
-  provenance:
-    "Supply-chain posture: unpinned or off-registry dependencies, embedded credentials, unreviewable binaries, missing attribution.",
-  network:
-    "Every outbound host is inventoried and matched against exfiltration, tunnelling, beacon, and transport-security rules.",
-};
-
 function Index() {
-  const ruleCount = RULES.length;
-  const byLayer = (layer: Layer) => RULES.filter((r) => r.layer === layer).length;
-
   return (
-    <div className="min-h-screen bg-skyfield font-body text-ink antialiased">
-      <header className="sticky top-0 z-40 border-b border-line/70 bg-skyfield/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3.5">
+    <div className="min-h-screen overflow-hidden bg-background font-body text-foreground">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/75 backdrop-blur-2xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Logo />
-          <nav className="hidden items-center gap-7 font-mono text-[12px] uppercase tracking-[0.12em] text-ink2 md:flex">
-            <a href="#threat-model" className="transition-colors hover:text-signal">
-              Threat model
-            </a>
-            <a href="#detection" className="transition-colors hover:text-signal">
-              Detection
-            </a>
-            <a href="#scan" className="transition-colors hover:text-signal">
-              Scanner
-            </a>
-          </nav>
-          <a href="#scan" className="btn-signal px-4 py-2 text-[13px]">
-            Open the scanner
-          </a>
+          <Button asChild size="sm" className="rounded-full px-4 shadow-none">
+            <a href="#scanner">Open scanner</a>
+          </Button>
         </div>
       </header>
 
       <main>
-        {/* HERO */}
-        <section className="mx-auto grid max-w-[1440px] grid-cols-12 gap-8 px-6 py-14 lg:py-20">
-          <div className="col-span-12 animate-rise lg:col-span-5">
-            <p className="eyebrow">(a) — the bench</p>
-            <h1 className="mt-5 max-w-[16ch] text-balance font-display text-5xl font-bold leading-[1.02] tracking-tight">
-              Skills are code. We read them like evidence.
+        <section className="relative flex min-h-[92vh] flex-col items-center justify-center px-5 pb-24 pt-32 text-center">
+          <div className="pointer-events-none absolute left-1/2 top-[42%] h-[560px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-[120px]" />
+          <div className="relative animate-reveal">
+            <p className="mb-6 text-[15px] font-medium text-primary">Security for Claude skills</p>
+            <h1 className="text-gradient mx-auto max-w-5xl text-balance font-display text-6xl font-semibold leading-[0.98] sm:text-7xl lg:text-[96px]">
+              Know before it runs.
             </h1>
-            <p className="mt-5 max-w-[46ch] text-pretty text-[17px] leading-relaxed text-ink2">
-              Before a Claude skill ships to your team, it sits under the lamp. Paragraph traces every
-              instruction, tool call, and hidden payload to a named rule — then hands you a verdict you
-              can defend to a board.
+            <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
+              Attest finds hidden instructions, dangerous behavior, and data exposure in any Claude skill. Privately, in your browser.
             </p>
-            <div className="mt-8 flex items-center gap-3">
-              <a href="#scan" className="btn-ink px-5 py-3 text-[14px]">
-                Start a scan
-              </a>
-              <a href="#detection" className="btn-quiet px-5 py-3 text-[14px]">
-                How it works
-              </a>
+            <div className="mt-9 flex items-center justify-center gap-3">
+              <Button asChild size="lg" className="h-12 rounded-full px-7 text-[15px] shadow-[0_10px_35px_color-mix(in_oklab,var(--color-primary)_25%,transparent)]">
+                <a href="#scanner">Scan a skill</a>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="h-12 rounded-full px-6 text-[15px] text-muted-foreground hover:text-foreground">
+                <a href="#scanner">See how it works <ArrowDown /></a>
+              </Button>
             </div>
-            <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-line pt-6">
-              <div>
-                <dt className="label-mono">Rules</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold">{ruleCount}</dd>
-              </div>
-              <div>
-                <dt className="label-mono">Layers</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold">{LAYER_ORDER.length}</dd>
-              </div>
-              <div>
-                <dt className="label-mono">Upload</dt>
-                <dd className="mt-1 font-display text-2xl font-semibold">None</dd>
-              </div>
-            </dl>
           </div>
 
-          <div className="col-span-12 animate-rise [animation-delay:120ms] lg:col-span-7">
-            <div className="relative overflow-hidden rounded-[12px] bg-paper ring-1 ring-black/5">
-              <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-safe" />
-                  <span className="font-mono text-[12px] text-ink2">paragraph · engine</span>
+          <div className="relative mt-20 flex w-full max-w-4xl animate-reveal justify-center [animation-delay:180ms]">
+            <div className="absolute inset-x-[12%] bottom-0 h-20 bg-primary/20 blur-[70px]" />
+            <div className="glass-panel relative w-full overflow-hidden rounded-[28px] p-2 shadow-2xl sm:p-3">
+              <div className="flex min-h-[290px] flex-col items-center justify-center rounded-[21px] bg-secondary/65 px-6">
+                <div className="relative flex size-32 animate-float items-center justify-center rounded-full border border-border bg-card shadow-[0_24px_60px_color-mix(in_oklab,var(--color-background)_70%,transparent)]">
+                  <div className="absolute inset-3 rounded-full border border-primary/25" />
+                  <LockKeyhole className="size-8 text-primary" strokeWidth={1.5} />
                 </div>
-                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-                  ready
-                </span>
-              </div>
-              <div className="relative overflow-hidden">
-                <div className="pointer-events-none absolute inset-x-0 h-[2px] animate-scanline bg-signal/60" />
-                <div className="space-y-1 px-4 py-5 font-mono text-[12px]">
-                  {LAYER_ORDER.map((layer, i) => (
-                    <div
-                      key={layer}
-                      className="flex animate-rise"
-                      style={{ animationDelay: `${i * 120}ms` }}
-                    >
-                      <span className="w-5 text-safe">✓</span>
-                      <span className="text-muted">{layer}</span>
-                      <span className="flex-1 border-b border-dotted border-line/70" />
-                      <span className="text-ink2">{byLayer(layer)} rules loaded</span>
-                    </div>
-                  ))}
-                  <div className="flex animate-rise pt-3 [animation-delay:520ms]">
-                    <span className="w-5 text-muted">·</span>
-                    <span className="text-muted">scoring</span>
-                    <span className="flex-1 border-b border-dotted border-line/70" />
-                    <span className="text-ink2">severity-weighted, capped 100</span>
-                  </div>
-                  <div className="flex animate-rise [animation-delay:620ms]">
-                    <span className="w-5 text-muted">·</span>
-                    <span className="text-muted">evidence</span>
-                    <span className="flex-1 border-b border-dotted border-line/70" />
-                    <span className="text-ink2">file · line · matched text</span>
-                  </div>
-                  <div className="flex animate-rise [animation-delay:720ms]">
-                    <span className="w-5 text-muted">·</span>
-                    <span className="text-muted">export</span>
-                    <span className="flex-1 border-b border-dotted border-line/70" />
-                    <span className="text-ink2">markdown · json</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between border-t border-line bg-skyfield/70 px-4 py-3">
-                <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
-                  local engine
-                </span>
-                <span className="flex items-center gap-2 font-mono text-[12px] text-ink2">
-                  <span className="size-1.5 animate-pulse rounded-full bg-signal" />
-                  awaiting an artifact…
-                </span>
+                <p className="mt-8 font-display text-xl font-medium">Ready to inspect</p>
+                <p className="mt-2 text-sm text-muted-foreground">Drop in a skill. Attest does the rest.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* THREAT MODEL + DETECTION */}
-        <section id="threat-model" className="border-t border-line/70 bg-paper">
-          <div className="mx-auto grid max-w-[1440px] grid-cols-12 gap-10 px-6 py-16">
-            <div className="col-span-12 lg:col-span-6">
-              <p className="eyebrow">(b) — threat model</p>
-              <h2 className="mt-4 max-w-[18ch] text-balance font-display text-3xl font-semibold tracking-tight">
-                A skill is a small program that borrows your agent's hands.
-              </h2>
-              <p className="mt-4 max-w-[52ch] text-pretty text-[15px] leading-relaxed text-ink2">
-                The surface is the markdown instruction file, the declared tool scope, and any scripts it
-                can invoke. A malicious skill does not need to be a virus — it just needs the agent to
-                follow an instruction it was told to trust. Paragraph models each of those vectors
-                separately, so a finding always names the exact mechanism it exploited, the file and line
-                it lives on, and the fix.
-              </p>
-            </div>
-            <div id="detection" className="col-span-12 lg:col-span-6">
-              <p className="eyebrow">(c) — detection, four layers</p>
-              <ol className="mt-5 space-y-4">
-                {LAYER_ORDER.map((layer, i) => (
-                  <li
-                    key={layer}
-                    className="flex gap-4 rounded-[10px] border border-line bg-skyfield/50 p-4 transition-colors hover:bg-skyfield"
-                  >
-                    <span className="font-mono text-[12px] font-semibold text-signal">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div>
-                      <p className="font-display text-[15px] font-semibold">
-                        {LAYER_LABEL[layer]}
-                        <span className="ml-2 font-mono text-[11px] font-normal text-muted">
-                          {byLayer(layer)} rules
-                        </span>
-                      </p>
-                      <p className="mt-1 text-[13px] text-muted">{LAYER_BLURB[layer]}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+        <section className="border-y border-border bg-card/35 px-5 py-24 text-center sm:py-32">
+          <p className="mx-auto max-w-4xl text-balance font-display text-4xl font-medium leading-tight sm:text-6xl">
+            Every instruction. Every connection. Every dependency.
+          </p>
+          <div className="mx-auto mt-12 flex max-w-2xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+            <span>{RULES.length} security checks</span><span className="text-border">•</span><span>Four analysis layers</span><span className="text-border">•</span><span>Zero uploads</span>
           </div>
         </section>
 
-        {/* SCANNER */}
-        <section id="scan" className="border-t border-line/70">
-          <div className="mx-auto max-w-[1440px] px-6 py-14">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="eyebrow">(d) — the scanner</p>
-                <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight">
-                  Place a skill on the bench.
-                </h2>
-              </div>
-              <span className="hidden font-mono text-[11px] uppercase tracking-[0.12em] text-muted sm:block">
-                drop zone · awaiting artifact
-              </span>
+        <section id="scanner" className="scroll-mt-14 px-4 py-24 sm:px-6 sm:py-32">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-12 text-center">
+              <p className="text-sm font-medium text-primary">Attest Scanner</p>
+              <h2 className="mt-3 font-display text-4xl font-semibold sm:text-6xl">See exactly what’s inside.</h2>
+              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Choose a folder, ZIP, or SKILL.md. Your files never leave this device.</p>
             </div>
             <SkillScanner />
           </div>
         </section>
-
-        {/* CTA */}
-        <section className="border-t border-line/70 bg-ink text-skyfield">
-          <div className="mx-auto flex max-w-[1440px] flex-col items-start justify-between gap-6 px-6 py-14 md:flex-row md:items-center">
-            <div>
-              <p className="eyebrow">(e) — ship it</p>
-              <h2 className="mt-3 max-w-[22ch] text-balance font-display text-3xl font-semibold tracking-tight">
-                Every skill, under the lamp. Before it runs.
-              </h2>
-            </div>
-            <a href="#scan" className="btn-signal px-6 py-3.5 text-[15px]">
-              Scan your first skill
-            </a>
-          </div>
-        </section>
       </main>
 
-      <footer className="bg-ink">
-        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-3 border-t border-skyfield/10 px-6 py-6 text-skyfield/50 md:flex-row">
-          <div className="flex items-center gap-2.5">
-            <LogoMark className="size-6" />
-            <span className="font-display text-[14px] font-semibold text-skyfield">PARAGRAPH</span>
-          </div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em]">
-            skill forensics · {ruleCount} rules · analysis runs locally
-          </p>
+      <footer className="border-t border-border px-5 py-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between text-sm text-muted-foreground">
+          <Logo />
+          <span>Analysis stays on your device.</span>
         </div>
       </footer>
     </div>

@@ -77,17 +77,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Paragraph — Skill Forensics" },
+      { title: "Attest — Claude Skill Security" },
       {
         name: "description",
         content:
-          "Enterprise detection of malicious Claude skills: static, behavioral, provenance and network analysis with auditable findings.",
+          "Scan Claude skills for hidden instructions, unsafe behavior, dependency risk, and data exfiltration before they run.",
       },
-      { property: "og:title", content: "Paragraph — Skill Forensics" },
+      { property: "og:title", content: "Attest — Claude Skill Security" },
       {
         property: "og:description",
         content:
-          "Enterprise detection of malicious Claude skills, with auditable findings and exportable reports.",
+          "Know what a Claude skill will do before you trust it.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -98,7 +98,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Outfit:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
