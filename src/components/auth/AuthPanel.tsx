@@ -55,7 +55,7 @@ export function AuthPanel() {
         <Button className="h-11 w-full rounded-full" disabled={busy}>{busy && <LoaderCircle className="animate-spin" />}{mode === "signin" ? "Sign in" : "Create account"}</Button>
       </form>
       <Button variant="link" className="mt-4 w-full text-muted-foreground" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMessage(null); }}>
-        {mode === "signin" ? "New to Attest? Create an account" : "Already have an account? Sign in"}
+        {mode === "signin" ? "New to Aperture? Create an account" : "Already have an account? Sign in"}
       </Button>
     </div>
   );

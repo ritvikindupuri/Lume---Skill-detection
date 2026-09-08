@@ -8,9 +8,9 @@ import { RULES } from "@/lib/scanner/rules";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Attest — Claude Skill Security" },
+      { title: "Aperture — Claude Skill Security" },
       { name: "description", content: "Scan Claude skills for hidden instructions, unsafe behavior, dependency risk, and data exfiltration before they run." },
-      { property: "og:title", content: "Attest — Claude Skill Security" },
+      { property: "og:title", content: "Aperture — Claude Skill Security" },
       { property: "og:description", content: "Know what a Claude skill will do before you trust it." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -41,7 +41,7 @@ function Index() {
               Know before it runs.
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Attest finds hidden instructions, dangerous behavior, and data exposure in any Claude skill. Privately, in your browser.
+              Aperture combines 35 deterministic controls with the strongest GPT review to expose hidden intent, dangerous behavior, and data leakage.
             </p>
             <div className="mt-9 flex items-center justify-center gap-3">
               <Button asChild size="lg" className="h-12 rounded-full px-7 text-[15px] shadow-[0_10px_35px_color-mix(in_oklab,var(--color-primary)_25%,transparent)]">
@@ -62,7 +62,7 @@ function Index() {
                   <LockKeyhole className="size-8 text-primary" strokeWidth={1.5} />
                 </div>
                 <p className="mt-8 font-display text-xl font-medium">Ready to inspect</p>
-                <p className="mt-2 text-sm text-muted-foreground">Drop in a skill. Attest does the rest.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Drop in a skill. Aperture sees through it.</p>
               </div>
             </div>
           </div>
@@ -73,16 +73,16 @@ function Index() {
             Every instruction. Every connection. Every dependency.
           </p>
           <div className="mx-auto mt-12 flex max-w-2xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-            <span>{RULES.length} security checks</span><span className="text-border">•</span><span>Four analysis layers</span><span className="text-border">•</span><span>Zero uploads</span>
+            <span>{RULES.length} security checks</span><span className="text-border">•</span><span>GPT intent analysis</span><span className="text-border">•</span><span>Evidence-backed findings</span>
           </div>
         </section>
 
         <section id="scanner" className="scroll-mt-14 px-4 py-24 sm:px-6 sm:py-32">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
-              <p className="text-sm font-medium text-primary">Attest Scanner</p>
+              <p className="text-sm font-medium text-primary">Aperture Scanner</p>
               <h2 className="mt-3 font-display text-4xl font-semibold sm:text-6xl">See exactly what’s inside.</h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Choose a folder, ZIP, or SKILL.md. Your files never leave this device.</p>
+              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Choose a folder, ZIP, or SKILL.md. Local rules run first; skill text then receives a secure GPT review.</p>
             </div>
             <SkillScanner />
           </div>
@@ -92,7 +92,7 @@ function Index() {
       <footer className="border-t border-border px-5 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-sm text-muted-foreground">
           <Logo />
-          <span>Analysis stays on your device.</span>
+           <span>Local controls. Advanced AI review.</span>
         </div>
       </footer>
     </div>

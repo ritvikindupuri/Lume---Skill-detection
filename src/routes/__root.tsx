@@ -78,13 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Attest — Claude Skill Security" },
+      { title: "Aperture — Claude Skill Security" },
       {
         name: "description",
         content:
           "Scan Claude skills for hidden instructions, unsafe behavior, dependency risk, and data exfiltration before they run.",
       },
-      { property: "og:title", content: "Attest — Claude Skill Security" },
+      { property: "og:title", content: "Aperture — Claude Skill Security" },
       {
         property: "og:description",
         content:
@@ -101,7 +101,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Outfit:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/aperture-mark.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
