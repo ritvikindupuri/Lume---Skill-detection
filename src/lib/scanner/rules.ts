@@ -39,7 +39,16 @@ const r = (
   remediation: string,
   pattern: RegExp,
   pathPattern?: RegExp,
-): Rule => ({ id, layer, severity, title, rationale, remediation, pattern, pathPattern });
+): Rule => ({
+  id,
+  layer,
+  severity,
+  title,
+  rationale,
+  remediation,
+  pattern,
+  ...(pathPattern ? { pathPattern } : {}),
+});
 
 /**
  * 35 deterministic checks derived from OWASP Top 10 for LLM Applications,
