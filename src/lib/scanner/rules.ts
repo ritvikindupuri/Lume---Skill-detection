@@ -420,5 +420,14 @@ export const LAYER_LABEL: Record<Layer, string> = {
   network: "Network posture",
 };
 
-/** Rules evaluated by line-matching (the structural ones are handled in the engine). */
-export const LINE_RULES = RULES.filter((r) => r.pattern.source !== "^\\uFFFF$");
+/** Rule IDs evaluated structurally by the engine rather than by line matching. */
+export const STRUCTURAL_RULE_IDS = ["PGR-S011", "PGR-P004", "PGR-P005", "PGR-N008"] as const;
+
+export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(
+  RULES.map((r) => [r.id, r]),
+);
+
+/** Rules evaluated by line-matching. */
+export const LINE_RULES = RULES.filter(
+  (r) => !(STRUCTURAL_RULE_IDS as readonly string[]).includes(r.id),
+);
