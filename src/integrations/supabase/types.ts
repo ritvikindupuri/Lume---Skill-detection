@@ -14,16 +14,243 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["organization_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["organization_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      risk_settings: {
+        Row: {
+          acceptable_score: number
+          block_on_critical: boolean
+          malicious_score: number
+          organization_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          acceptable_score?: number
+          block_on_critical?: boolean
+          malicious_score?: number
+          organization_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          acceptable_score?: number
+          block_on_critical?: boolean
+          malicious_score?: number
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_findings: {
+        Row: {
+          category: string
+          created_at: string
+          evidence: string
+          file_path: string
+          id: string
+          line_number: number
+          organization_id: string
+          remediation: string
+          rule_id: string
+          scan_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          evidence: string
+          file_path: string
+          id?: string
+          line_number?: number
+          organization_id: string
+          remediation: string
+          rule_id: string
+          scan_id: string
+          severity: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          evidence?: string
+          file_path?: string
+          id?: string
+          line_number?: number
+          organization_id?: string
+          remediation?: string
+          rule_id?: string
+          scan_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_findings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_findings_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "skill_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_scans: {
+        Row: {
+          artifact_name: string
+          created_at: string
+          declared_name: string | null
+          files_count: number
+          findings_count: number
+          id: string
+          organization_id: string
+          rules_evaluated: number
+          scanned_at: string
+          scanned_by: string
+          score: number
+          severity_counts: Json
+          sha256: string
+          verdict: string
+        }
+        Insert: {
+          artifact_name: string
+          created_at?: string
+          declared_name?: string | null
+          files_count?: number
+          findings_count?: number
+          id?: string
+          organization_id: string
+          rules_evaluated?: number
+          scanned_at?: string
+          scanned_by: string
+          score: number
+          severity_counts?: Json
+          sha256: string
+          verdict: string
+        }
+        Update: {
+          artifact_name?: string
+          created_at?: string
+          declared_name?: string | null
+          files_count?: number
+          findings_count?: number
+          id?: string
+          organization_id?: string
+          rules_evaluated?: number
+          scanned_at?: string
+          scanned_by?: string
+          score?: number
+          severity_counts?: Json
+          sha256?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_scans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_organization_with_admin: {
+        Args: { _name: string; _slug: string }
+        Returns: string
+      }
+      has_organization_role: {
+        Args: {
+          _organization_id: string
+          _roles: Database["public"]["Enums"]["organization_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_organization_member: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      organization_role: "admin" | "analyst" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +377,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      organization_role: ["admin", "analyst", "viewer"],
+    },
   },
 } as const
