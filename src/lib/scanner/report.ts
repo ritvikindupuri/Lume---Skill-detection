@@ -3,7 +3,7 @@ import type { ScanResult } from "./engine";
 
 export function toMarkdown(r: ScanResult): string {
   const lines: string[] = [];
-  lines.push(`# Paragraph skill forensics report`);
+  lines.push(`# Attest skill security report`);
   lines.push("");
   lines.push(`- Artifact: \`${r.artifactName}\``);
   lines.push(`- SHA-256: \`${r.sha256}\``);

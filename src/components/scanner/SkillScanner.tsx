@@ -100,10 +100,10 @@ export function SkillScanner() {
   };
 
   return (
-    <div className="mt-6 grid grid-cols-12 gap-4">
+    <div className="glass-panel mt-6 grid grid-cols-12 gap-4 rounded-[28px] p-3 sm:p-5">
       {/* LEFT: artifact */}
       <div className="col-span-12 lg:col-span-4">
-        <div className="rounded-[12px] border border-dashed border-border bg-card/70 p-4">
+        <div className="rounded-[20px] border border-border bg-card/70 p-4">
           <div className="flex items-center justify-between">
             <p className="label-mono">artifact</p>
             {result && (
@@ -147,7 +147,7 @@ export function SkillScanner() {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === "Enter" && fileInput.current?.click()}
-            className={`mt-3 flex cursor-pointer flex-col items-center rounded-[10px] border border-dashed py-9 text-center transition-colors ${
+            className={`mt-3 flex cursor-pointer flex-col items-center rounded-[16px] border border-dashed py-12 text-center transition-colors ${
               dragging ? "border-primary bg-accent" : "border-border bg-secondary/60 hover:border-primary/50 hover:bg-secondary"
             }`}
           >
@@ -249,7 +249,7 @@ export function SkillScanner() {
 
       {/* RIGHT: verdict + findings */}
       <div className="col-span-12 lg:col-span-8">
-        <div className="sticky top-[64px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-secondary px-4 py-3 text-foreground ring-1 ring-border">
+        <div className="sticky top-[64px] z-30 flex flex-wrap items-center justify-between gap-3 rounded-[18px] bg-secondary px-4 py-3 text-foreground ring-1 ring-border">
           <div className="flex items-center gap-3">
             <span
               className={`flex size-9 items-center justify-center rounded-[8px] bg-secondary/10 font-mono text-[15px] font-semibold ${
@@ -297,7 +297,7 @@ export function SkillScanner() {
                   "application/json",
                 )
               }
-              className="btn-quiet px-3 py-1.5 text-[12px] text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,white_20%,transparent)] hover:bg-secondary/10"
+              className="btn-quiet px-3 py-1.5 text-[12px] text-foreground hover:bg-accent"
             >
               JSON
             </button>
@@ -323,7 +323,7 @@ export function SkillScanner() {
 
         {/* empty */}
         {phase !== "working" && !result && (
-          <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center rounded-[12px] border border-border bg-card/60 px-6 text-center">
+          <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center rounded-[20px] border border-border bg-card/60 px-6 text-center">
             <span className="flex size-14 items-center justify-center rounded-full border border-border bg-secondary font-mono text-xl text-muted-foreground">
               ¶
             </span>
