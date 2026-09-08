@@ -48,8 +48,22 @@ export interface ScanResult {
   endpoints: Endpoint[];
   metadata: { name?: string; description?: string; author?: string; license?: string; tools?: string[] };
   score: number;
+  rawScore: number;
   verdict: Verdict;
+  policy: RiskConfig;
 }
+
+export interface RiskConfig {
+  acceptableScore: number;
+  maliciousScore: number;
+  blockOnCritical: boolean;
+}
+
+export const DEFAULT_RISK_CONFIG: RiskConfig = {
+  acceptableScore: 18,
+  maliciousScore: 55,
+  blockOnCritical: true,
+};
 
 function rule(id: string) {
   const r = RULES_BY_ID[id];
@@ -108,6 +122,7 @@ export async function sha256Hex(parts: string[]): Promise<string> {
 export async function scanArtifact(
   artifactName: string,
   files: ArtifactFile[],
+  riskConfig: RiskConfig = DEFAULT_RISK_CONFIG,
 ): Promise<ScanResult> {
   const started = performance.now();
   const findings: Finding[] = [];
@@ -128,20 +143,6 @@ export async function scanArtifact(
 
   for (const file of files) {
     if (file.text === null) {
-      const binaryRule = rule("PGR-P004");
-      if (binaryRule.pathPattern?.test(file.path)) {
-        push({
-          ruleId: binaryRule.id,
-          title: binaryRule.title,
-          severity: binaryRule.severity,
-          layer: binaryRule.layer,
-          rationale: binaryRule.rationale,
-          remediation: binaryRule.remediation,
-          file: file.path,
-          line: 0,
-          evidence: `binary artifact · ${file.size.toLocaleString()} bytes`,
-        });
-      }
       continue;
     }
 
@@ -178,24 +179,8 @@ export async function scanArtifact(
 
   // ── structural checks ──────────────────────────────────────────────────
   if (skillFile) {
-    if (!frontmatterPresent || !meta.name || !meta.description) {
-      const r = rule("PGR-S011");
-      push({
-        ruleId: r.id,
-        title: r.title,
-        severity: r.severity,
-        layer: r.layer,
-        rationale: r.rationale,
-        remediation: r.remediation,
-        file: skillFile.path,
-        line: 1,
-        evidence: frontmatterPresent
-          ? `frontmatter present but missing: ${[!meta.name && "name", !meta.description && "description"].filter(Boolean).join(", ")}`
-          : "no YAML frontmatter block found",
-      });
-    }
     if (!meta.author && !meta.license) {
-      const r = rule("PGR-P005");
+      const r = rule("ATT-027");
       push({
         ruleId: r.id,
         title: r.title,
@@ -214,24 +199,6 @@ export async function scanArtifact(
     .map(([host, occurrences]) => ({ host, occurrences }))
     .sort((a, b) => b.occurrences - a.occurrences);
 
-  if (endpoints.length > 0) {
-    const r = rule("PGR-N008");
-    push({
-      ruleId: r.id,
-      title: r.title,
-      severity: r.severity,
-      layer: r.layer,
-      rationale: r.rationale,
-      remediation: r.remediation,
-      file: skillFile?.path ?? artifactName,
-      line: 0,
-      evidence: `${endpoints.length} external host${endpoints.length === 1 ? "" : "s"}: ${endpoints
-        .slice(0, 6)
-        .map((e) => e.host)
-        .join(", ")}${endpoints.length > 6 ? " …" : ""}`,
-    });
-  }
-
   const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
   for (const f of findings) counts[f.severity] += 1;
 
@@ -243,9 +210,22 @@ export async function scanArtifact(
       raw += SEVERITY_WEIGHT[sev] / (1 + i * 0.55);
     }
   }
-  const score = Math.min(100, Math.round(raw));
+  const rawScore = Math.min(100, Math.round(raw));
+  const acceptable = Math.max(1, Math.min(riskConfig.acceptableScore, 98));
+  const malicious = Math.max(acceptable + 1, Math.min(riskConfig.maliciousScore, 100));
+  const score = Math.round(
+    rawScore <= acceptable
+      ? (rawScore / acceptable) * 17
+      : rawScore < malicious
+        ? 18 + ((rawScore - acceptable) / (malicious - acceptable)) * 36
+        : 55 + ((rawScore - malicious) / Math.max(1, 100 - malicious)) * 45,
+  );
   const verdict: Verdict =
-    counts.critical > 0 || score >= 55 ? "malicious" : score >= 18 ? "suspicious" : "clean";
+    (riskConfig.blockOnCritical && counts.critical > 0) || rawScore >= malicious
+      ? "malicious"
+      : rawScore >= acceptable
+        ? "suspicious"
+        : "clean";
 
   findings.sort(
     (a, b) =>
@@ -272,6 +252,8 @@ export async function scanArtifact(
     endpoints,
     metadata: meta,
     score,
+    rawScore,
     verdict,
+    policy: { ...riskConfig, acceptableScore: acceptable, maliciousScore: malicious },
   };
 }

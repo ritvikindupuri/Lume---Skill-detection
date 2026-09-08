@@ -9,7 +9,8 @@ export function toMarkdown(r: ScanResult): string {
   lines.push(`- SHA-256: \`${r.sha256}\``);
   lines.push(`- Scanned: ${r.scannedAt} (${r.durationMs} ms)`);
   lines.push(`- Rules evaluated: ${r.rulesEvaluated}`);
-  lines.push(`- Verdict: **${r.verdict.toUpperCase()}** · risk score ${r.score}/100`);
+  lines.push(`- Verdict: **${r.verdict.toUpperCase()}** · policy-adjusted risk score ${r.score}/100`);
+  lines.push(`- Inherent score: ${r.rawScore}/100 · review at ${r.policy.acceptableScore} · block at ${r.policy.maliciousScore}`);
   lines.push(
     `- Findings: ${r.counts.critical} critical · ${r.counts.high} high · ${r.counts.medium} medium · ${r.counts.low} low`,
   );
