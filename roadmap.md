@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Enable company accounts and persistent scan history
-- [ ] Add configurable risk thresholds that affect score and verdict
-- [ ] Add batch skill upload and dashboard trend views
-- [ ] Expand and validate 35 real detection rules for hallucination, leakage, privacy, and bias
-- [ ] Verify sign-in, scanning, saved results, and responsive layout
+- [x] Enable company accounts and persistent scan history
+- [x] Add configurable risk thresholds that affect score and verdict
+- [x] Add batch skill upload and dashboard trend views
+- [x] Expand and validate 35 real detection rules for hallucination, leakage, privacy, and bias
+- [x] Verify sign-in, scanning, saved results, and responsive layout
