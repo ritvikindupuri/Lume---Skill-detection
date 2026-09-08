@@ -96,7 +96,7 @@ export const saveScan = createServerFn({ method: "POST" })
       organization_id: data.organizationId,
       scanned_by: context.userId,
       artifact_name: data.artifactName,
-      declared_name: data.declaredName,
+      declared_name: data.declaredName ?? null,
       sha256: data.sha256,
       score: data.score,
       verdict: data.verdict,
