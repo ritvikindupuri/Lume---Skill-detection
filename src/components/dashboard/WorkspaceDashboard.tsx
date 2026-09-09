@@ -19,7 +19,7 @@ import {
 import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
-import { streamAiScan } from "@/lib/ai-scan.client";
+import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
 import { ScanDetail } from "./ScanDetail";
 import { ScoreExplainer } from "./ScoreExplainer";
