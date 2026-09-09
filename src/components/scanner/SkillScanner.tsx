@@ -204,7 +204,7 @@ export function SkillScanner() {
           )}
 
           <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
-            Files are checked locally, then skill text is sent securely to Lovable AI for advanced intent analysis. Files are not retained by Aperture.
+            Local checks run first. Skill text then receives a secure AI review. Lume does not retain files.
           </p>
         </div>
 
@@ -294,7 +294,7 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `aperture-report-${result.sha256.slice(0, 8)}.md`,
+                  `lume-report-${result.sha256.slice(0, 8)}.md`,
                   toMarkdown(result),
                   "text/markdown",
                 )
@@ -308,7 +308,7 @@ export function SkillScanner() {
               onClick={() =>
                 result &&
                 download(
-                  `aperture-report-${result.sha256.slice(0, 8)}.json`,
+                  `lume-report-${result.sha256.slice(0, 8)}.json`,
                   JSON.stringify(result, null, 2),
                   "application/json",
                 )

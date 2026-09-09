@@ -1,6 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 
-export function createApertureAi(lovableApiKey: string) {
+export function createLumeAi(lovableApiKey: string) {
   return createOpenAI({
     baseURL: "https://ai.gateway.lovable.dev/v1",
     apiKey: "gateway-managed",
