@@ -203,7 +203,7 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
                 </summary>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   <p><span className="text-foreground">Category:</span> {LAYER_LABEL[rule.layer]}</p>
-                  <p><span className="text-foreground">Confidence:</span> {confidence}% — {confidenceLabel(confidence)}</p>
+                  <p><span className="text-foreground">Confidence:</span> {confidence}% — {confidenceLabel(confidence)} <ConfidenceHint /></p>
                   <p><span className="text-foreground">Why it matters:</span> {rule.rationale}</p>
                   <p><span className="text-foreground">How to fix it:</span> {rule.remediation}</p>
                   <p className="break-all font-mono text-xs">{rule.pattern.source.length > 400 ? "structural check — evaluated on file metadata" : `/${rule.pattern.source}/i`}</p>
