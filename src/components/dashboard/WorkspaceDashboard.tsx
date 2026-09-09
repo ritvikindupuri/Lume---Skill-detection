@@ -310,7 +310,7 @@ export function WorkspaceDashboard() {
                         <button
                           type="button"
                           key={scan.id}
-                          onClick={() => setSelected({ id: scan.id, name: scan.declared_name ?? scan.artifact_name })}
+                          onClick={() => setSelected({ id: scan.id, name: scan.declared_name ?? scan.artifact_name, containment: scan.containment })}
                           className={`grid w-full grid-cols-[1fr_auto] gap-4 px-6 py-4 text-left transition-colors hover:bg-secondary sm:grid-cols-[1fr_120px_120px] ${selected?.id === scan.id ? "bg-secondary" : ""}`}
                         >
                           <span className="min-w-0">
