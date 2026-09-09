@@ -12,3 +12,8 @@
 - [x] Remove scanning functionality from the public landing page
 - [x] Add a looping product demonstration video to the landing page
 - [x] Verify the dashboard remains the only place to scan and save results
+- [x] Per-finding confidence and reviewer false-positive marking
+- [x] Score calculation explained in the dashboard
+- [x] Full built-in check library visible in the dashboard
+- [x] Workspace-authored custom checks that run on every scan
+- [x] Removed "company" wording from the product surface
