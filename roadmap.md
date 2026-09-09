@@ -17,3 +17,6 @@
 - [x] Full built-in check library visible in the dashboard
 - [x] Workspace-authored custom checks that run on every scan
 - [x] Removed "company" wording from the product surface
+
+- [x] Live analysis log streaming the model reading each line during a scan
+- [x] Review actions quarantine or clear a scanned skill and re-score it
