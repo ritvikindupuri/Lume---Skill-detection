@@ -23,5 +23,6 @@ export function ConfidenceHint() {
         <p className="mt-1.5">80%+ = High precision, 60–79% = Moderate, below 60% = Broad heuristic worth a closer human look.</p>
       </TooltipContent>
     </Tooltip>
+    </TooltipProvider>
   );
 }
