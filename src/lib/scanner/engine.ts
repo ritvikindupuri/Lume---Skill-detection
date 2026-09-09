@@ -4,7 +4,9 @@ import {
   RULES_BY_ID,
   SEVERITY_ORDER,
   SEVERITY_WEIGHT,
+  ruleConfidence,
   type Layer,
+  type Rule,
   type Severity,
 } from "./rules";
 
@@ -14,6 +16,8 @@ export interface ArtifactFile {
   /** Decoded text; null for binary files. */
   text: string | null;
 }
+
+export type FindingSource = "rule" | "custom" | "ai";
 
 export interface Finding {
   key: string;
@@ -26,6 +30,9 @@ export interface Finding {
   file: string;
   line: number;
   evidence: string;
+  /** Estimated precision of this detection, 0–100. */
+  confidence: number;
+  source: FindingSource;
 }
 
 export type Verdict = "malicious" | "suspicious" | "clean";
@@ -33,6 +40,20 @@ export type Verdict = "malicious" | "suspicious" | "clean";
 export interface Endpoint {
   host: string;
   occurrences: number;
+}
+
+export interface ScoreStep {
+  severity: Severity;
+  count: number;
+  weight: number;
+  contribution: number;
+}
+
+export interface ScoreBreakdown {
+  steps: ScoreStep[];
+  rawScore: number;
+  score: number;
+  verdict: Verdict;
 }
 
 export interface ScanResult {
@@ -51,26 +72,8 @@ export interface ScanResult {
   rawScore: number;
   verdict: Verdict;
   policy: RiskConfig;
+  breakdown: ScoreStep[];
   ai?: { model: string; findings: number };
-}
-
-export function mergeAiFindings(result: ScanResult, aiFindings: Finding[], model: string): ScanResult {
-  const existing = new Set(result.findings.map((finding) => `${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
-  const novel = aiFindings.filter((finding) => !existing.has(`${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
-  const findings = [...result.findings, ...novel].sort(
-    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) || a.file.localeCompare(b.file) || a.line - b.line,
-  );
-  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
-  for (const finding of findings) counts[finding.severity] += 1;
-  let raw = 0;
-  for (const severity of SEVERITY_ORDER) {
-    for (let i = 0; i < counts[severity]; i++) raw += SEVERITY_WEIGHT[severity] / (1 + i * 0.55);
-  }
-  const rawScore = Math.min(100, Math.round(raw));
-  const { acceptableScore: acceptable, maliciousScore: malicious, blockOnCritical } = result.policy;
-  const score = Math.round(rawScore <= acceptable ? (rawScore / Math.max(1, acceptable)) * 17 : rawScore < malicious ? 18 + ((rawScore - acceptable) / (malicious - acceptable)) * 36 : 55 + ((rawScore - malicious) / Math.max(1, 100 - malicious)) * 45);
-  const verdict: Verdict = (blockOnCritical && counts.critical > 0) || rawScore >= malicious ? "malicious" : rawScore >= acceptable ? "suspicious" : "clean";
-  return { ...result, findings, counts, rawScore, score, verdict, ai: { model, findings: novel.length } };
 }
 
 export interface RiskConfig {
@@ -84,6 +87,77 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
   maliciousScore: 55,
   blockOnCritical: true,
 };
+
+export function normalizePolicy(policy: RiskConfig): RiskConfig {
+  const acceptableScore = Math.max(1, Math.min(policy.acceptableScore, 98));
+  const maliciousScore = Math.max(acceptableScore + 1, Math.min(policy.maliciousScore, 100));
+  return { acceptableScore, maliciousScore, blockOnCritical: policy.blockOnCritical };
+}
+
+/**
+ * Scoring model, fully deterministic:
+ * 1. every finding contributes its severity weight,
+ * 2. each repeat of the same severity is damped by 1 / (1 + 0.55 × n),
+ * 3. the sum is capped at 100 — this is the inherent score,
+ * 4. the inherent score is mapped onto the workspace thresholds,
+ * 5. the verdict follows the thresholds (and the critical override).
+ */
+export function computeScore(counts: Record<Severity, number>, riskConfig: RiskConfig): ScoreBreakdown {
+  const policy = normalizePolicy(riskConfig);
+  const steps: ScoreStep[] = [];
+  let raw = 0;
+  for (const severity of SEVERITY_ORDER) {
+    let contribution = 0;
+    for (let i = 0; i < counts[severity]; i++) contribution += SEVERITY_WEIGHT[severity] / (1 + i * 0.55);
+    raw += contribution;
+    steps.push({
+      severity,
+      count: counts[severity],
+      weight: SEVERITY_WEIGHT[severity],
+      contribution: Math.round(contribution * 10) / 10,
+    });
+  }
+  const rawScore = Math.min(100, Math.round(raw));
+  const { acceptableScore: acceptable, maliciousScore: malicious } = policy;
+  const score = Math.round(
+    rawScore <= acceptable
+      ? (rawScore / acceptable) * 17
+      : rawScore < malicious
+        ? 18 + ((rawScore - acceptable) / (malicious - acceptable)) * 36
+        : 55 + ((rawScore - malicious) / Math.max(1, 100 - malicious)) * 45,
+  );
+  const verdict: Verdict =
+    (policy.blockOnCritical && counts.critical > 0) || rawScore >= malicious
+      ? "malicious"
+      : rawScore >= acceptable
+        ? "suspicious"
+        : "clean";
+  return { steps, rawScore, score, verdict };
+}
+
+export function countBySeverity(findings: Finding[]): Record<Severity, number> {
+  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+  for (const finding of findings) counts[finding.severity] += 1;
+  return counts;
+}
+
+function sortFindings(findings: Finding[]): Finding[] {
+  return [...findings].sort(
+    (a, b) =>
+      SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
+      a.file.localeCompare(b.file) ||
+      a.line - b.line,
+  );
+}
+
+export function mergeAiFindings(result: ScanResult, aiFindings: Finding[], model: string): ScanResult {
+  const existing = new Set(result.findings.map((finding) => `${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
+  const novel = aiFindings.filter((finding) => !existing.has(`${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
+  const findings = sortFindings([...result.findings, ...novel]);
+  const counts = countBySeverity(findings);
+  const { steps, rawScore, score, verdict } = computeScore(counts, result.policy);
+  return { ...result, findings, counts, rawScore, score, verdict, breakdown: steps, ai: { model, findings: novel.length } };
+}
 
 function rule(id: string) {
   const r = RULES_BY_ID[id];
@@ -139,22 +213,30 @@ export async function sha256Hex(parts: string[]): Promise<string> {
     .join("");
 }
 
+export interface CompiledCustomRule extends Rule {
+  confidence: number;
+}
+
 export async function scanArtifact(
   artifactName: string,
   files: ArtifactFile[],
   riskConfig: RiskConfig = DEFAULT_RISK_CONFIG,
+  customRules: CompiledCustomRule[] = [],
 ): Promise<ScanResult> {
   const started = performance.now();
   const findings: Finding[] = [];
   const perFileFindings = new Map<string, number>();
   const hostCounts = new Map<string, number>();
+  const customIds = new Set(customRules.map((item) => item.id));
+  const customConfidence = new Map(customRules.map((item) => [item.id, item.confidence]));
+  const activeRules: Rule[] = [...LINE_RULES, ...customRules];
 
   const skillFile =
     files.find((f) => /(^|\/)SKILL\.md$/i.test(f.path)) ??
     files.find((f) => f.text !== null && /\.md$/i.test(f.path));
-  const { meta, present: frontmatterPresent } = skillFile?.text
+  const { meta } = skillFile?.text
     ? parseFrontmatter(skillFile.text)
-    : { meta: {} as ScanResult["metadata"], present: false };
+    : { meta: {} as ScanResult["metadata"] };
 
   const push = (f: Omit<Finding, "key">) => {
     findings.push({ ...f, key: `${f.ruleId}:${f.file}:${f.line}` });
@@ -162,9 +244,7 @@ export async function scanArtifact(
   };
 
   for (const file of files) {
-    if (file.text === null) {
-      continue;
-    }
+    if (file.text === null) continue;
 
     for (const host of extractHosts(file.text)) {
       hostCounts.set(host, (hostCounts.get(host) ?? 0) + 1);
@@ -176,83 +256,56 @@ export async function scanArtifact(
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i] ?? "";
       if (!line.trim()) continue;
-      for (const rule of LINE_RULES) {
-        if (rule.pathPattern && !rule.pathPattern.test(file.path)) continue;
-        const count = perRuleCount.get(rule.id) ?? 0;
+      for (const active of activeRules) {
+        if (active.pathPattern && !active.pathPattern.test(file.path)) continue;
+        const count = perRuleCount.get(active.id) ?? 0;
         if (count >= MAX_FINDINGS_PER_RULE_FILE) continue;
-        if (!rule.pattern.test(line)) continue;
-        perRuleCount.set(rule.id, count + 1);
+        if (!active.pattern.test(line)) continue;
+        perRuleCount.set(active.id, count + 1);
+        const custom = customIds.has(active.id);
         push({
-          ruleId: rule.id,
-          title: rule.title,
-          severity: rule.severity,
-          layer: rule.layer,
-          rationale: rule.rationale,
-          remediation: rule.remediation,
+          ruleId: active.id,
+          title: active.title,
+          severity: active.severity,
+          layer: active.layer,
+          rationale: active.rationale,
+          remediation: active.remediation,
           file: file.path,
           line: i + 1,
           evidence: clip(line),
+          confidence: custom
+            ? (customConfidence.get(active.id) ?? 60)
+            : ruleConfidence(active.id, active.severity),
+          source: custom ? "custom" : "rule",
         });
       }
     }
   }
 
   // ── structural checks ──────────────────────────────────────────────────
-  if (skillFile) {
-    if (!meta.author && !meta.license) {
-      const r = rule("ATT-027");
-      push({
-        ruleId: r.id,
-        title: r.title,
-        severity: r.severity,
-        layer: r.layer,
-        rationale: r.rationale,
-        remediation: r.remediation,
-        file: skillFile.path,
-        line: 1,
-        evidence: "no author or license declared",
-      });
-    }
+  if (skillFile && !meta.author && !meta.license) {
+    const r = rule("ATT-027");
+    push({
+      ruleId: r.id,
+      title: r.title,
+      severity: r.severity,
+      layer: r.layer,
+      rationale: r.rationale,
+      remediation: r.remediation,
+      file: skillFile.path,
+      line: 1,
+      evidence: "no author or license declared",
+      confidence: ruleConfidence(r.id, r.severity),
+      source: "rule",
+    });
   }
 
   const endpoints: Endpoint[] = [...hostCounts.entries()]
     .map(([host, occurrences]) => ({ host, occurrences }))
     .sort((a, b) => b.occurrences - a.occurrences);
 
-  const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
-  for (const f of findings) counts[f.severity] += 1;
-
-  // Scoring: severity weights with diminishing returns per additional finding
-  // of the same severity, capped at 100.
-  let raw = 0;
-  for (const sev of SEVERITY_ORDER) {
-    for (let i = 0; i < counts[sev]; i++) {
-      raw += SEVERITY_WEIGHT[sev] / (1 + i * 0.55);
-    }
-  }
-  const rawScore = Math.min(100, Math.round(raw));
-  const acceptable = Math.max(1, Math.min(riskConfig.acceptableScore, 98));
-  const malicious = Math.max(acceptable + 1, Math.min(riskConfig.maliciousScore, 100));
-  const score = Math.round(
-    rawScore <= acceptable
-      ? (rawScore / acceptable) * 17
-      : rawScore < malicious
-        ? 18 + ((rawScore - acceptable) / (malicious - acceptable)) * 36
-        : 55 + ((rawScore - malicious) / Math.max(1, 100 - malicious)) * 45,
-  );
-  const verdict: Verdict =
-    (riskConfig.blockOnCritical && counts.critical > 0) || rawScore >= malicious
-      ? "malicious"
-      : rawScore >= acceptable
-        ? "suspicious"
-        : "clean";
-
-  findings.sort(
-    (a, b) =>
-      SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
-      a.file.localeCompare(b.file) ||
-      a.line - b.line,
-  );
+  const counts = countBySeverity(findings);
+  const { steps, rawScore, score, verdict } = computeScore(counts, riskConfig);
 
   return {
     scannedAt: new Date().toISOString(),
@@ -266,14 +319,15 @@ export async function scanArtifact(
       findings: perFileFindings.get(f.path) ?? 0,
     })),
     totalBytes: files.reduce((n, f) => n + f.size, 0),
-    rulesEvaluated: RULES.length,
-    findings,
+    rulesEvaluated: RULES.length + customRules.length,
+    findings: sortFindings(findings),
     counts,
     endpoints,
     metadata: meta,
     score,
     rawScore,
     verdict,
-    policy: { ...riskConfig, acceptableScore: acceptable, maliciousScore: malicious },
+    policy: normalizePolicy(riskConfig),
+    breakdown: steps,
   };
 }
