@@ -120,8 +120,104 @@ export const saveScan = createServerFn({ method: "POST" })
         line_number: finding.line,
         evidence: finding.evidence,
         remediation: finding.remediation,
+        confidence: finding.confidence,
       })));
       if (findings.error) throw new Error("Scan saved, but its findings could not be stored.");
     }
     return { id: inserted.data.id };
+  });
+
+export const getScanFindings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase
+      .from("scan_findings")
+      .select("id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status")
+      .eq("scan_id", data.scanId)
+      .order("severity", { ascending: true });
+    if (result.error) throw new Error("Could not load the findings for this scan.");
+    return result.data ?? [];
+  });
+
+export const reviewFinding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    findingId: z.string().uuid(),
+    status: z.enum(["open", "confirmed", "false_positive"]),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase
+      .from("scan_findings")
+      .update({ status: data.status, reviewed_by: context.userId, reviewed_at: new Date().toISOString() })
+      .eq("id", data.findingId);
+    if (result.error) throw new Error("Could not save this review decision.");
+    return { ok: true };
+  });
+
+const customCheckSchema = z.object({
+  organizationId: z.string().uuid(),
+  code: z.string().trim().regex(/^[A-Za-z0-9-]{3,20}$/, "Use 3–20 letters, numbers, or dashes."),
+  title: z.string().trim().min(3).max(120),
+  severity: z.enum(["critical", "high", "medium", "low"]),
+  layer: z.enum(["prompt", "agency", "leakage", "privacy", "supply-chain", "integrity", "bias", "resilience"]),
+  pattern: z.string().trim().min(2).max(400).refine((value) => {
+    try { new RegExp(value, "i"); return true; } catch { return false; }
+  }, "That pattern is not a valid expression."),
+  rationale: z.string().trim().max(500).default(""),
+  remediation: z.string().trim().max(500).default(""),
+  confidence: z.number().int().min(0).max(100).default(60),
+});
+
+export const listCustomChecks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase
+      .from("custom_checks")
+      .select("*")
+      .eq("organization_id", data.organizationId)
+      .order("created_at", { ascending: true });
+    if (result.error) throw new Error("Could not load your custom checks.");
+    return result.data ?? [];
+  });
+
+export const createCustomCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => customCheckSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase.from("custom_checks").insert({
+      organization_id: data.organizationId,
+      code: data.code.toUpperCase(),
+      title: data.title,
+      severity: data.severity,
+      layer: data.layer,
+      pattern: data.pattern,
+      rationale: data.rationale,
+      remediation: data.remediation,
+      confidence: data.confidence,
+      created_by: context.userId,
+    }).select("id").single();
+    if (result.error) {
+      throw new Error(result.error.code === "23505" ? "A check with that code already exists." : "Could not save this check.");
+    }
+    return { id: result.data.id };
+  });
+
+export const setCustomCheckEnabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid(), enabled: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase.from("custom_checks").update({ enabled: data.enabled }).eq("id", data.id);
+    if (result.error) throw new Error("Could not update this check.");
+    return { ok: true };
+  });
+
+export const deleteCustomCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase.from("custom_checks").delete().eq("id", data.id);
+    if (result.error) throw new Error("Could not delete this check.");
+    return { ok: true };
   });
