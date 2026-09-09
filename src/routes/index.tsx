@@ -88,8 +88,8 @@ function Index() {
                 preload="metadata"
                 aria-label="Lume scanning a Claude skill and returning a risk score"
               >
-                <source src="/media/lume-product-demo.webm" type="video/webm" />
-                <source src="/media/lume-product-demo.mp4" type="video/mp4" />
+                <source src="/media/lume-product-demo.webm?v=2" type="video/webm" />
+                <source src="/media/lume-product-demo.mp4?v=2" type="video/mp4" />
               </video>
             </div>
             <div className="mt-8 text-center">
