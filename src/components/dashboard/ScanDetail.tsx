@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, LoaderCircle, X, XCircle } from "lucide-react";
+import { CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { computeScore, type RiskConfig } from "@/lib/scanner/engine";
 import { confidenceLabel, type Severity } from "@/lib/scanner/rules";
@@ -79,6 +79,33 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} title="Close"><X /></Button>
       </div>
+
+      {state === "quarantined" && (
+        <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
+          <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
+          <div>
+            <p className="font-medium text-critical">Skill quarantined</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A reviewer confirmed a real serious risk, so this skill is marked as not safe to deploy
+              {outcome ? ` · score ${outcome.score}/100 (${outcome.verdict})` : ""}.
+            </p>
+          </div>
+        </div>
+      )}
+      {state === "cleared" && (
+        <div className="flex items-start gap-3 border-b border-border bg-safe/10 px-6 py-4">
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-safe" />
+          <div>
+            <p className="font-medium text-safe">Skill cleared</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Reviewers dismissed the remaining flags, so this skill is recorded as safe to deploy
+              {outcome ? ` · score ${outcome.score}/100` : ""}.
+            </p>
+          </div>
+        </div>
+      )}
+      {error && <p className="border-b border-border px-6 py-3 text-sm text-critical">{error}</p>}
+
 
       {findings === null ? (
         <div className="flex min-h-40 items-center justify-center"><LoaderCircle className="size-5 animate-spin text-primary" /></div>
