@@ -269,6 +269,10 @@ export function WorkspaceDashboard() {
               <div className="space-y-8">
                 <section className="rounded-xl border border-border bg-card p-6"><div className="flex items-center justify-between"><div><p className="label-mono">Risk trend</p><h2 className="mt-2 font-display text-xl font-medium">Policy-adjusted score</h2></div><FileScan className="text-muted-foreground" /></div><div className="mt-8"><Trend scans={workspace.scans} /></div></section>
 
+                {thinking && (
+                  <ThinkingLog artifact={thinking.artifact} steps={thinking.steps} reasoning={thinking.reasoning} active={scanning} />
+                )}
+
                 {queue.length > 0 && (
                   <section>
                     <p className="label-mono mb-3">Latest batch</p>
