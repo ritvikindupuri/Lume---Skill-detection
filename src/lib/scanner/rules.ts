@@ -105,6 +105,8 @@ export const LAYER_LABEL: Record<Layer, string> = {
   resilience: "Resilience",
 };
 
+export const LAYERS = Object.keys(LAYER_LABEL) as Layer[];
+
 export const STRUCTURAL_RULE_IDS = ["ATT-027"] as const;
 
 export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
@@ -112,3 +114,64 @@ export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(RULES.map((r
 export const LINE_RULES = RULES.filter(
   (rule) => !(STRUCTURAL_RULE_IDS as readonly string[]).includes(rule.id),
 );
+
+/**
+ * Precision estimate for each check, expressed as a percentage. Base value
+ * follows severity; checks whose pattern is broad (and therefore more likely
+ * to match legitimate content) are lowered explicitly.
+ */
+const BASE_CONFIDENCE: Record<Severity, number> = { critical: 88, high: 78, medium: 68, low: 58 };
+
+const CONFIDENCE_OVERRIDE: Record<string, number> = {
+  "ATT-004": 62,
+  "ATT-005": 60,
+  "ATT-013": 45,
+  "ATT-015": 55,
+  "ATT-018": 55,
+  "ATT-020": 48,
+  "ATT-023": 60,
+  "ATT-026": 58,
+  "ATT-027": 92,
+  "ATT-029": 60,
+  "ATT-031": 62,
+  "ATT-032": 50,
+  "ATT-034": 52,
+};
+
+export function ruleConfidence(id: string, severity: Severity): number {
+  return CONFIDENCE_OVERRIDE[id] ?? BASE_CONFIDENCE[severity];
+}
+
+export function confidenceLabel(confidence: number): string {
+  if (confidence >= 80) return "High precision";
+  if (confidence >= 60) return "Moderate precision";
+  return "Broad heuristic";
+}
+
+/** A check authored inside the workspace and compiled to a runnable rule. */
+export interface CustomCheckInput {
+  code: string;
+  title: string;
+  severity: Severity;
+  layer: Layer;
+  pattern: string;
+  rationale: string;
+  remediation: string;
+  confidence: number;
+}
+
+export function compileCustomCheck(check: CustomCheckInput): Rule | null {
+  try {
+    return {
+      id: check.code,
+      layer: check.layer,
+      severity: check.severity,
+      title: check.title,
+      rationale: check.rationale || "Matched a check defined by this workspace.",
+      remediation: check.remediation || "Review this pattern against your internal policy.",
+      pattern: new RegExp(check.pattern, "i"),
+    };
+  } catch {
+    return null;
+  }
+}
