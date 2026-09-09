@@ -63,7 +63,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ name: z.string().trim().min(2).max(120) }).parse(input))
   .handler(async ({ data, context }) => {
-    const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "company";
+    const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "workspace";
     const slug = `${base}-${crypto.randomUUID().slice(0, 8)}`;
     const result = await context.supabase.rpc("create_organization_with_admin", { _name: data.name, _slug: slug });
     if (result.error) throw new Error("Could not create the workspace.");
