@@ -1,8 +1,9 @@
 import { Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ConfidenceHint() {
   return (
+    <TooltipProvider delayDuration={150}>
     <Tooltip>
       <TooltipTrigger asChild>
         <button type="button" aria-label="How confidence is calculated" className="inline-flex align-middle text-muted-foreground transition-colors hover:text-foreground">

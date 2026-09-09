@@ -119,7 +119,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
                 <span className="font-mono text-xs text-muted-foreground">{finding.rule_id}</span>
                 <span className="font-medium">{finding.title}</span>
                 <span className={`text-xs font-medium ${severityClass[finding.severity as Severity]}`}>{finding.severity}</span>
-                <span className="text-xs text-muted-foreground">{finding.confidence}% · {confidenceLabel(finding.confidence)}</span>
+                <span className="text-xs text-muted-foreground">{finding.confidence}% · {confidenceLabel(finding.confidence)} <ConfidenceHint /></span>
                 {finding.status !== "open" && (
                   <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                     {finding.status === "confirmed" ? "Confirmed" : "False positive"}
