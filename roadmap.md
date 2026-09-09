@@ -9,3 +9,6 @@
 - [x] Replace the rejected identity with Lume and the selected prism mark
 - [x] Simplify the landing page with minimal copy and icon-led security signals
 - [x] Verify AI detection, error handling, branding, and responsive layout
+- [x] Remove scanning functionality from the public landing page
+- [x] Add a looping product demonstration video to the landing page
+- [x] Verify the dashboard remains the only place to scan and save results
