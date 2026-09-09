@@ -12,6 +12,7 @@ const findingSchema = z.object({
   line: z.number().int().min(0),
   evidence: z.string().max(500),
   remediation: z.string().max(1000),
+  confidence: z.number().int().min(0).max(100),
 });
 
 const scanSchema = z.object({
