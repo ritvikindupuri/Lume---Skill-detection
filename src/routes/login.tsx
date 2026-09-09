@@ -5,7 +5,7 @@ import { Logo } from "@/components/Logo";
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [
     { title: "Sign in — Lume" },
-    { name: "description", content: "Sign in to your Lume company security workspace." },
+    { name: "description", content: "Sign in to your Lume security workspace." },
     { property: "og:title", content: "Sign in — Lume" },
     { property: "og:description", content: "Access your Claude skill security workspace." },
     { property: "og:type", content: "website" },

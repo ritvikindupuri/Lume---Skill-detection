@@ -25,7 +25,7 @@ function Index() {
           <Logo />
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm" className="rounded-full px-4"><Link to="/login">Sign in</Link></Button>
-            <Button asChild size="sm" className="rounded-full px-4 shadow-none"><Link to="/dashboard">Company dashboard</Link></Button>
+            <Button asChild size="sm" className="rounded-full px-4 shadow-none"><Link to="/dashboard">Dashboard</Link></Button>
           </div>
         </div>
       </header>
@@ -46,7 +46,7 @@ function Index() {
                 <Link to="/dashboard">Open dashboard</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-[15px]">
-                <Link to="/dashboard">For companies</Link>
+                <Link to="/login">Sign in</Link>
               </Button>
             </div>
           </div>
