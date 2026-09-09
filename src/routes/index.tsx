@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { BrainCircuit, FileScan, Network, Play, Sparkles } from "lucide-react";
 import { Logo, LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import productDemo from "@/assets/lume-product-demo.mp4.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -81,7 +80,7 @@ function Index() {
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
               <video
-                src={productDemo.url}
+                src="/media/lume-product-demo.mp4"
                 className="aspect-video w-full object-cover"
                 autoPlay
                 muted

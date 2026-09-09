@@ -11,4 +11,4 @@
 - [x] Verify AI detection, error handling, branding, and responsive layout
 - [x] Remove scanning functionality from the public landing page
 - [x] Add a looping product demonstration video to the landing page
-- [ ] Verify the dashboard remains the only place to scan and save results
+- [x] Verify the dashboard remains the only place to scan and save results
