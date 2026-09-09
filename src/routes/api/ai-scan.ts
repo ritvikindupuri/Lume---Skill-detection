@@ -63,10 +63,24 @@ export const Route = createFileRoute("/api/ai-scan")({
               });
 
               let output = "";
+              let streamed = 0;
+              const flushLog = () => {
+                // Everything before the JSON fence is the reviewer-facing reading log.
+                const cut = output.indexOf("```");
+                const visible = cut === -1 ? output : output.slice(0, cut);
+                if (visible.length > streamed) {
+                  send({ type: "reasoning", text: visible.slice(streamed) });
+                  streamed = visible.length;
+                }
+              };
               for await (const part of result.fullStream) {
                 if (part.type === "reasoning-delta") send({ type: "reasoning", text: part.text });
-                else if (part.type === "text-delta") output += part.text;
+                else if (part.type === "text-delta") {
+                  output += part.text;
+                  flushLog();
+                }
               }
+              flushLog();
               const findings = normalizeFindings(extractJson(output || (await result.text)));
               send({ type: "done", model: AI_MODEL, findings });
             } catch (error) {
