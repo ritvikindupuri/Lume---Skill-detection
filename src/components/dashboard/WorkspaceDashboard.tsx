@@ -19,10 +19,13 @@ import {
 import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
-import { analyzeSkillWithAi } from "@/lib/ai-scan.functions";
+import { streamAiScan } from "@/lib/ai-scan.client";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
 import { ScanDetail } from "./ScanDetail";
 import { ScoreExplainer } from "./ScoreExplainer";
+import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
+
+interface ThinkingState { artifact: string; steps: ThinkingStep[]; reasoning: string }
 
 type Workspace = Awaited<ReturnType<typeof getWorkspace>>;
 type HistoryScan = Workspace["scans"][number];
@@ -64,7 +67,8 @@ export function WorkspaceDashboard() {
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "checks">("overview");
-  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [selected, setSelected] = useState<{ id: string; name: string; containment: string } | null>(null);
+  const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
   const refresh = async () => {
     const data = await loadWorkspace();
