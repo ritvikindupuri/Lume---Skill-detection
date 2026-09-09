@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BrainCircuit, FileScan, Network, Sparkles } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { Logo, LogoMark } from "@/components/Logo";
 import { SkillScanner } from "@/components/scanner/SkillScanner";
 import { Button } from "@/components/ui/button";
 
