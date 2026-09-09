@@ -80,7 +80,6 @@ function Index() {
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
               <video
-                src="/media/lume-product-demo.mp4"
                 className="aspect-video w-full object-cover"
                 autoPlay
                 muted
@@ -88,7 +87,10 @@ function Index() {
                 playsInline
                 preload="metadata"
                 aria-label="Lume scanning a Claude skill and returning a risk score"
-              />
+              >
+                <source src="/media/lume-product-demo.webm" type="video/webm" />
+                <source src="/media/lume-product-demo.mp4" type="video/mp4" />
+              </video>
             </div>
             <div className="mt-8 text-center">
               <Button asChild size="lg" className="h-12 rounded-2xl px-7">
