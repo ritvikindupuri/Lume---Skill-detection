@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CompanyDashboard } from "@/components/dashboard/CompanyDashboard";
+import { WorkspaceDashboard } from "@/components/dashboard/WorkspaceDashboard";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [
-    { title: "Company Risk Dashboard — Lume" },
-    { name: "description", content: "Analyze Claude skills in batches, configure company risk thresholds, and track security scores over time." },
-    { property: "og:title", content: "Company Risk Dashboard — Lume" },
-    { property: "og:description", content: "Company-wide Claude skill risk policy and scan history." },
+    { title: "Risk Dashboard — Lume" },
+    { name: "description", content: "Analyze Claude skills in batches, tune risk thresholds, author your own checks, and track security scores over time." },
+    { property: "og:title", content: "Risk Dashboard — Lume" },
+    { property: "og:description", content: "Claude skill risk policy, custom checks, and scan history." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  component: CompanyDashboard,
+  component: WorkspaceDashboard,
 });

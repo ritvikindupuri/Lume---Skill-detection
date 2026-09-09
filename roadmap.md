@@ -1,6 +1,6 @@
 # Roadmap
 
-- [x] Enable company accounts and persistent scan history
+- [x] Enable team accounts and persistent scan history
 - [x] Add configurable risk thresholds that affect score and verdict
 - [x] Add batch skill upload and dashboard trend views
 - [x] Expand and validate 35 real detection rules for hallucination, leakage, privacy, and bias
@@ -12,3 +12,8 @@
 - [x] Remove scanning functionality from the public landing page
 - [x] Add a looping product demonstration video to the landing page
 - [x] Verify the dashboard remains the only place to scan and save results
+- [x] Per-finding confidence and reviewer false-positive marking
+- [x] Score calculation explained in the dashboard
+- [x] Full built-in check library visible in the dashboard
+- [x] Workspace-authored custom checks that run on every scan
+- [x] Removed "company" wording from the product surface

@@ -41,7 +41,7 @@ export function AuthPanel() {
 
   return (
     <div className="w-full max-w-[420px]">
-      <p className="text-sm font-medium text-primary">Company workspace</p>
+      <p className="text-sm font-medium text-primary">Secure workspace</p>
       <h1 className="mt-3 font-display text-4xl font-semibold">{mode === "signin" ? "Welcome back." : "Create your workspace."}</h1>
       <p className="mt-3 text-muted-foreground">Sign in to save scans, set risk policy, and track every skill over time.</p>
       <Button variant="outline" className="mt-8 h-11 w-full rounded-full" onClick={() => void google()} disabled={busy}>
@@ -49,7 +49,7 @@ export function AuthPanel() {
       </Button>
       <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
       <form onSubmit={(event) => void submit(event)} className="space-y-4">
-        <label className="block text-sm"><span className="mb-2 block text-muted-foreground">Work email</span><Input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 bg-card" /></label>
+        <label className="block text-sm"><span className="mb-2 block text-muted-foreground">Email</span><Input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 bg-card" /></label>
         <label className="block text-sm"><span className="mb-2 block text-muted-foreground">Password</span><Input type="password" autoComplete={mode === "signin" ? "current-password" : "new-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} className="h-11 bg-card" /></label>
         {message && <p className="rounded-md border border-border bg-card px-3 py-2 text-sm text-muted-foreground">{message}</p>}
         <Button className="h-11 w-full rounded-full" disabled={busy}>{busy && <LoaderCircle className="animate-spin" />}{mode === "signin" ? "Sign in" : "Create account"}</Button>

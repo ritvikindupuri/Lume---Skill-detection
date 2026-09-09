@@ -72,7 +72,7 @@ export const RULES: Rule[] = [
   r("ATT-013", "agency", "high", "Cross-boundary file access", "Absolute paths and traversal can expose data outside the declared workspace.", "Constrain file access to the working directory and reject traversal.", /(?:^|[\s"'`])(\.\.\/|\/etc\/|\/home\/|\/Users\/|~\/|\$HOME\/)[^\s"'`]*/i),
   r("ATT-014", "leakage", "critical", "Covert exfiltration channel", "URL parameters, DNS, or rendered beacons can transmit data without an obvious upload.", "Remove the channel and use an approved, logged data path.", /(!\[[^\]]*\]\(https?:\/\/[^)]+[?&][^=]+=\$?\{?[^)]+\)|<img[^>]+src=["']https?:\/\/[^"']+[?&]|\b(nslookup|dig)\s+\$?\{?[^\s]+\}?\.)/i),
   r("ATT-015", "leakage", "critical", "Credential or secret harvesting", "Reading secret stores is a common collection stage before exfiltration.", "Remove secret access and accept only explicit, scoped inputs.", /(\.env(?:\.[a-z]+)?\b|~\/\.ssh|id_rsa|id_ed25519|\.aws\/credentials|\.kube\/config|\.npmrc|\.netrc|\.git-credentials|service[-_]account\.json|keychain)/i),
-  r("ATT-016", "leakage", "high", "Conversation or context telemetry", "Exporting full prompts, messages, or context can disclose confidential company information.", "Log only minimal, redacted operational metadata to approved systems.", /\b(send|upload|post|transmit|log)\b[^.\n]{0,80}\b(full\s+)?(conversation|chat\s+history|transcript|prompt|context|previous\s+messages)\b/i),
+  r("ATT-016", "leakage", "high", "Conversation or context telemetry", "Exporting full prompts, messages, or context can disclose confidential business information.", "Log only minimal, redacted operational metadata to approved systems.", /\b(send|upload|post|transmit|log)\b[^.\n]{0,80}\b(full\s+)?(conversation|chat\s+history|transcript|prompt|context|previous\s+messages)\b/i),
   r("ATT-017", "privacy", "high", "Cross-session data reuse", "Persisting one person's context for another can cause tenant or user data leakage.", "Partition storage by organization and user; expire session data.", /\b(reuse|share|load|retrieve|remember|persist)\b[^.\n]{0,70}\b(previous|another|other)\b[^.\n]{0,35}\b(user|customer|session|tenant)('?s)?\b[^.\n]{0,40}\b(data|context|history|result)/i),
   r("ATT-018", "leakage", "medium", "Broad sensitive file discovery", "Recursive scans of home or root directories collect more data than a skill needs.", "Scope file reads to explicit workspace paths.", /\b(find\s+(\/|~|\$HOME)\s|grep\s+-r[a-z]*\s+[^\n]{0,50}\s+(\/|~|\$HOME)|glob\s*\([^)]*\*\*\/\*|ls\s+-[a-zR]*R[a-zR]*\s+(\/|~))/i),
   r("ATT-019", "privacy", "high", "Excessive personal or health data collection", "Collecting sensitive personal data without necessity violates data-minimization principles.", "Collect only fields required for the stated purpose and obtain consent.", /\b(collect|extract|gather|scrape|store|record)\b[^.\n]{0,80}\b(SSN|social\s+security|passport|medical|health\s+record|diagnosis|biometric|sexual\s+orientation|religion|ethnicity|home\s+address|date\s+of\s+birth)\b/i),
@@ -105,6 +105,8 @@ export const LAYER_LABEL: Record<Layer, string> = {
   resilience: "Resilience",
 };
 
+export const LAYERS = Object.keys(LAYER_LABEL) as Layer[];
+
 export const STRUCTURAL_RULE_IDS = ["ATT-027"] as const;
 
 export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(RULES.map((rule) => [rule.id, rule]));
@@ -112,3 +114,64 @@ export const RULES_BY_ID: Record<string, Rule> = Object.fromEntries(RULES.map((r
 export const LINE_RULES = RULES.filter(
   (rule) => !(STRUCTURAL_RULE_IDS as readonly string[]).includes(rule.id),
 );
+
+/**
+ * Precision estimate for each check, expressed as a percentage. Base value
+ * follows severity; checks whose pattern is broad (and therefore more likely
+ * to match legitimate content) are lowered explicitly.
+ */
+const BASE_CONFIDENCE: Record<Severity, number> = { critical: 88, high: 78, medium: 68, low: 58 };
+
+const CONFIDENCE_OVERRIDE: Record<string, number> = {
+  "ATT-004": 62,
+  "ATT-005": 60,
+  "ATT-013": 45,
+  "ATT-015": 55,
+  "ATT-018": 55,
+  "ATT-020": 48,
+  "ATT-023": 60,
+  "ATT-026": 58,
+  "ATT-027": 92,
+  "ATT-029": 60,
+  "ATT-031": 62,
+  "ATT-032": 50,
+  "ATT-034": 52,
+};
+
+export function ruleConfidence(id: string, severity: Severity): number {
+  return CONFIDENCE_OVERRIDE[id] ?? BASE_CONFIDENCE[severity];
+}
+
+export function confidenceLabel(confidence: number): string {
+  if (confidence >= 80) return "High precision";
+  if (confidence >= 60) return "Moderate precision";
+  return "Broad heuristic";
+}
+
+/** A check authored inside the workspace and compiled to a runnable rule. */
+export interface CustomCheckInput {
+  code: string;
+  title: string;
+  severity: Severity;
+  layer: Layer;
+  pattern: string;
+  rationale: string;
+  remediation: string;
+  confidence: number;
+}
+
+export function compileCustomCheck(check: CustomCheckInput): Rule | null {
+  try {
+    return {
+      id: check.code,
+      layer: check.layer,
+      severity: check.severity,
+      title: check.title,
+      rationale: check.rationale || "Matched a check defined by this workspace.",
+      remediation: check.remediation || "Review this pattern against your internal policy.",
+      pattern: new RegExp(check.pattern, "i"),
+    };
+  } catch {
+    return null;
+  }
+}

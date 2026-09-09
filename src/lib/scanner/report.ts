@@ -47,6 +47,7 @@ export function toMarkdown(r: ScanResult): string {
     lines.push("");
     lines.push(`### [${f.severity.toUpperCase()}] ${f.ruleId} — ${f.title}`);
     lines.push(`- Layer: ${LAYER_LABEL[f.layer]}`);
+    lines.push(`- Detected by: ${f.source === "ai" ? "AI intent review" : f.source === "custom" ? "workspace check" : "built-in check"} · confidence ${f.confidence}%`);
     lines.push(`- Location: \`${f.file}\`${f.line ? `:${f.line}` : ""}`);
     lines.push(`- Evidence: \`${f.evidence.replace(/`/g, "'")}\``);
     lines.push(`- Why it matters: ${f.rationale}`);
