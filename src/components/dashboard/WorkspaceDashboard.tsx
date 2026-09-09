@@ -55,7 +55,7 @@ export function WorkspaceDashboard() {
   const updateSettingsFn = useServerFn(updateRiskSettings);
   const saveScanFn = useServerFn(saveScan);
   const listChecksFn = useServerFn(listCustomChecks);
-  const analyzeWithAi = useServerFn(analyzeSkillWithAi);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [checks, setChecks] = useState<CustomCheck[]>([]);
@@ -288,7 +288,17 @@ export function WorkspaceDashboard() {
                   </section>
                 )}
 
-                {selected && <ScanDetail scanId={selected.id} name={selected.name} policy={policy} canReview={canEdit} onClose={() => setSelected(null)} />}
+                {selected && (
+                  <ScanDetail
+                    scanId={selected.id}
+                    name={selected.name}
+                    policy={policy}
+                    canReview={canEdit}
+                    containment={selected.containment}
+                    onClose={() => setSelected(null)}
+                    onReviewed={refresh}
+                  />
+                )}
 
                 <section className="overflow-hidden rounded-xl border border-border bg-card">
                   <div className="border-b border-border px-6 py-5"><p className="label-mono">Scan history</p><h2 className="mt-2 font-display text-xl font-medium">All analyzed skills</h2><p className="mt-1 text-sm text-muted-foreground">Select a scan to review its findings and flag false positives.</p></div>
