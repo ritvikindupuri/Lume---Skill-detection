@@ -20,25 +20,40 @@ interface Props {
   name: string;
   policy: RiskConfig;
   canReview: boolean;
+  containment?: string;
   onClose: () => void;
+  onReviewed?: () => void | Promise<void>;
 }
 
-export function ScanDetail({ scanId, name, policy, canReview, onClose }: Props) {
+type Outcome = { score: number; verdict: string; containment: string };
+
+export function ScanDetail({ scanId, name, policy, canReview, containment, onClose, onReviewed }: Props) {
   const load = useServerFn(getScanFindings);
   const review = useServerFn(reviewFinding);
   const [findings, setFindings] = useState<StoredFinding[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setFindings(null);
+    setOutcome(null);
+    setError(null);
     void load({ data: { scanId } }).then(setFindings).catch(() => setFindings([]));
   }, [scanId]);
 
+  const state = outcome?.containment ?? containment ?? "none";
+
   const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
+    setError(null);
     try {
-      await review({ data: { findingId: finding.id, status } });
+      const result = await review({ data: { findingId: finding.id, scanId, status } });
       setFindings((current) => (current ?? []).map((item) => (item.id === finding.id ? { ...item, status } : item)));
+      setOutcome(result);
+      await onReviewed?.();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save this decision.");
     } finally {
       setPending(null);
     }
