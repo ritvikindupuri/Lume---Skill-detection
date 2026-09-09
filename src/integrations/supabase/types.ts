@@ -242,6 +242,9 @@ export type Database = {
       skill_scans: {
         Row: {
           artifact_name: string
+          contained_at: string | null
+          contained_by: string | null
+          containment: string
           created_at: string
           declared_name: string | null
           files_count: number
@@ -258,6 +261,9 @@ export type Database = {
         }
         Insert: {
           artifact_name: string
+          contained_at?: string | null
+          contained_by?: string | null
+          containment?: string
           created_at?: string
           declared_name?: string | null
           files_count?: number
@@ -274,6 +280,9 @@ export type Database = {
         }
         Update: {
           artifact_name?: string
+          contained_at?: string | null
+          contained_by?: string | null
+          containment?: string
           created_at?: string
           declared_name?: string | null
           files_count?: number
