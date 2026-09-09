@@ -19,10 +19,13 @@ import {
 import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
-import { analyzeSkillWithAi } from "@/lib/ai-scan.functions";
+import { streamAiScan } from "@/lib/ai-scan.client";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
 import { ScanDetail } from "./ScanDetail";
 import { ScoreExplainer } from "./ScoreExplainer";
+import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
+
+interface ThinkingState { artifact: string; steps: ThinkingStep[]; reasoning: string }
 
 type Workspace = Awaited<ReturnType<typeof getWorkspace>>;
 type HistoryScan = Workspace["scans"][number];
@@ -52,7 +55,7 @@ export function WorkspaceDashboard() {
   const updateSettingsFn = useServerFn(updateRiskSettings);
   const saveScanFn = useServerFn(saveScan);
   const listChecksFn = useServerFn(listCustomChecks);
-  const analyzeWithAi = useServerFn(analyzeSkillWithAi);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [checks, setChecks] = useState<CustomCheck[]>([]);
@@ -64,7 +67,8 @@ export function WorkspaceDashboard() {
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "checks">("overview");
-  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+  const [selected, setSelected] = useState<{ id: string; name: string; containment: string } | null>(null);
+  const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
   const refresh = async () => {
     const data = await loadWorkspace();
@@ -145,14 +149,39 @@ export function WorkspaceDashboard() {
     const completed: ScanResult[] = [];
     try {
       for (const file of Array.from(files)) {
+        setThinking({ artifact: file.name, reasoning: "", steps: [{ label: "Reading the skill files", done: false }] });
         const artifact = await readArtifact([file]);
+        const fileList = artifact.files.map((item) => item.path).join(", ");
+        setThinking((current) => current && ({
+          ...current,
+          artifact: artifact.name,
+          steps: [
+            { label: `Read ${artifact.files.length} file${artifact.files.length === 1 ? "" : "s"}: ${fileList}`, done: true },
+            { label: `Running ${RULES.length + compiledChecks.length} deterministic checks`, done: false },
+          ],
+        }));
         const deterministic = await scanArtifact(artifact.name, artifact.files, policy, compiledChecks);
+        setThinking((current) => current && ({
+          ...current,
+          steps: [
+            { ...(current.steps[0] as ThinkingStep) },
+            { label: `Deterministic checks complete · ${deterministic.findings.length} finding${deterministic.findings.length === 1 ? "" : "s"}`, done: true },
+            { label: "GPT reviewing intent, combinations and evasion", done: false },
+          ],
+        }));
         const content = artifact.files.filter((item) => item.text !== null).map((item) => `--- FILE: ${item.path} ---\n${item.text}`).join("\n\n").slice(0, 500_000);
-        const ai = await analyzeWithAi({ data: {
-          artifactName: artifact.name,
-          content,
-          deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file: findingFile, line, evidence }) => ({ ruleId, title, severity, file: findingFile, line, evidence })),
-        } });
+        const ai = await streamAiScan(
+          {
+            artifactName: artifact.name,
+            content,
+            deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file: findingFile, line, evidence }) => ({ ruleId, title, severity, file: findingFile, line, evidence })),
+          },
+          (text) => setThinking((current) => current && { ...current, reasoning: current.reasoning + text }),
+        );
+        setThinking((current) => current && ({
+          ...current,
+          steps: current.steps.map((step, index) => (index === current.steps.length - 1 ? { label: `GPT review complete · ${ai.findings.length} additional finding${ai.findings.length === 1 ? "" : "s"}`, done: true } : step)),
+        }));
         const result = mergeAiFindings(deterministic, ai.findings, ai.model);
         completed.push(result);
         await saveScanFn({ data: {
@@ -240,6 +269,10 @@ export function WorkspaceDashboard() {
               <div className="space-y-8">
                 <section className="rounded-xl border border-border bg-card p-6"><div className="flex items-center justify-between"><div><p className="label-mono">Risk trend</p><h2 className="mt-2 font-display text-xl font-medium">Policy-adjusted score</h2></div><FileScan className="text-muted-foreground" /></div><div className="mt-8"><Trend scans={workspace.scans} /></div></section>
 
+                {thinking && (
+                  <ThinkingLog artifact={thinking.artifact} steps={thinking.steps} reasoning={thinking.reasoning} active={scanning} />
+                )}
+
                 {queue.length > 0 && (
                   <section>
                     <p className="label-mono mb-3">Latest batch</p>
@@ -259,7 +292,17 @@ export function WorkspaceDashboard() {
                   </section>
                 )}
 
-                {selected && <ScanDetail scanId={selected.id} name={selected.name} policy={policy} canReview={canEdit} onClose={() => setSelected(null)} />}
+                {selected && (
+                  <ScanDetail
+                    scanId={selected.id}
+                    name={selected.name}
+                    policy={policy}
+                    canReview={canEdit}
+                    containment={selected.containment}
+                    onClose={() => setSelected(null)}
+                    onReviewed={refresh}
+                  />
+                )}
 
                 <section className="overflow-hidden rounded-xl border border-border bg-card">
                   <div className="border-b border-border px-6 py-5"><p className="label-mono">Scan history</p><h2 className="mt-2 font-display text-xl font-medium">All analyzed skills</h2><p className="mt-1 text-sm text-muted-foreground">Select a scan to review its findings and flag false positives.</p></div>
@@ -271,12 +314,16 @@ export function WorkspaceDashboard() {
                         <button
                           type="button"
                           key={scan.id}
-                          onClick={() => setSelected({ id: scan.id, name: scan.declared_name ?? scan.artifact_name })}
+                          onClick={() => setSelected({ id: scan.id, name: scan.declared_name ?? scan.artifact_name, containment: scan.containment })}
                           className={`grid w-full grid-cols-[1fr_auto] gap-4 px-6 py-4 text-left transition-colors hover:bg-secondary sm:grid-cols-[1fr_120px_120px] ${selected?.id === scan.id ? "bg-secondary" : ""}`}
                         >
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{scan.declared_name ?? scan.artifact_name}</span>
-                            <span className="mt-1 block text-xs text-muted-foreground">{new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings
+                              {scan.containment === "quarantined" && <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>}
+                              {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
+                            </span>
                           </span>
                           <span className={`self-center text-right text-sm font-medium capitalize ${verdictClass[scan.verdict as keyof typeof verdictClass] ?? "text-foreground"}`}>{scan.verdict}</span>
                           <span className="hidden self-center text-right font-mono text-lg sm:block">{scan.score}</span>
