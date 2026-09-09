@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { computeScore } from "@/lib/scanner/engine";
+import type { Severity } from "@/lib/scanner/rules";
 import type { Json } from "@/integrations/supabase/types";
 
 const findingSchema = z.object({
