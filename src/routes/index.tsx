@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BrainCircuit, FileScan, Network, Sparkles } from "lucide-react";
+import { BrainCircuit, FileScan, Network, Play, Sparkles } from "lucide-react";
 import { Logo, LogoMark } from "@/components/Logo";
-import { SkillScanner } from "@/components/scanner/SkillScanner";
 import { Button } from "@/components/ui/button";
+import productDemo from "@/assets/lume-product-demo.mp4.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,7 +44,7 @@ function Index() {
             </p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <Button asChild size="lg" className="h-12 rounded-2xl px-7 text-[15px] shadow-lg">
-                <a href="#scanner">Scan a skill</a>
+                <Link to="/dashboard">Open dashboard</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-[15px]">
                 <Link to="/dashboard">For companies</Link>
@@ -73,13 +73,29 @@ function Index() {
           <p className="mx-auto mt-5 max-w-3xl text-balance font-display text-3xl font-medium sm:text-5xl">Local rules. Deep AI review. Clear evidence.</p>
         </section>
 
-        <section id="scanner" className="scroll-mt-14 px-4 py-24 sm:px-6 sm:py-32">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-12 text-center">
-              <FileScan className="mx-auto size-7 text-primary" />
-              <h2 className="mt-4 font-display text-4xl font-semibold sm:text-6xl">Inspect a skill.</h2>
+        <section className="px-4 py-20 sm:px-6 sm:py-28" aria-labelledby="product-preview-title">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-8 flex items-center justify-center gap-2 text-primary">
+              <Play className="size-4" fill="currentColor" />
+              <h2 id="product-preview-title" className="font-display text-lg font-medium text-foreground">See Lume work.</h2>
             </div>
-            <SkillScanner />
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+              <video
+                src={productDemo.url}
+                className="aspect-video w-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label="Lume scanning a Claude skill and returning a risk score"
+              />
+            </div>
+            <div className="mt-8 text-center">
+              <Button asChild size="lg" className="h-12 rounded-2xl px-7">
+                <Link to="/dashboard">Start in dashboard</Link>
+              </Button>
+            </div>
           </div>
         </section>
       </main>
