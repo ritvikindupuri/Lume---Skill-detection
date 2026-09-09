@@ -144,6 +144,7 @@ export const reviewFinding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({
     findingId: z.string().uuid(),
+    scanId: z.string().uuid(),
     status: z.enum(["open", "confirmed", "false_positive"]),
   }).parse(input))
   .handler(async ({ data, context }) => {
@@ -152,7 +153,47 @@ export const reviewFinding = createServerFn({ method: "POST" })
       .update({ status: data.status, reviewed_by: context.userId, reviewed_at: new Date().toISOString() })
       .eq("id", data.findingId);
     if (result.error) throw new Error("Could not save this review decision.");
-    return { ok: true };
+
+    const [scan, findings] = await Promise.all([
+      context.supabase.from("skill_scans").select("id, organization_id").eq("id", data.scanId).single(),
+      context.supabase.from("scan_findings").select("severity, status").eq("scan_id", data.scanId),
+    ]);
+    if (scan.error || findings.error) throw new Error("Decision saved, but the scan could not be re-scored.");
+
+    const settings = await context.supabase
+      .from("risk_settings")
+      .select("acceptable_score, malicious_score, block_on_critical")
+      .eq("organization_id", scan.data.organization_id)
+      .single();
+    if (settings.error) throw new Error("Decision saved, but the risk policy could not be read.");
+
+    const rows = findings.data ?? [];
+    const active = rows.filter((row) => row.status !== "false_positive");
+    const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const row of active) counts[row.severity as Severity] += 1;
+    const { score, verdict } = computeScore(counts, {
+      acceptableScore: settings.data.acceptable_score,
+      maliciousScore: settings.data.malicious_score,
+      blockOnCritical: settings.data.block_on_critical,
+    });
+
+    const confirmedSevere = rows.some((row) => row.status === "confirmed" && (row.severity === "critical" || row.severity === "high"));
+    const allDismissed = rows.length > 0 && active.length === 0;
+    const containment = confirmedSevere ? "quarantined" : allDismissed || verdict === "clean" ? "cleared" : "none";
+
+    const updated = await context.supabase
+      .from("skill_scans")
+      .update({
+        score,
+        verdict,
+        containment,
+        contained_at: containment === "none" ? null : new Date().toISOString(),
+        contained_by: containment === "none" ? null : context.userId,
+      })
+      .eq("id", data.scanId);
+    if (updated.error) throw new Error("Decision saved, but the scan record could not be updated.");
+
+    return { score, verdict, containment };
   });
 
 const customCheckSchema = z.object({
