@@ -315,7 +315,11 @@ export function WorkspaceDashboard() {
                         >
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{scan.declared_name ?? scan.artifact_name}</span>
-                            <span className="mt-1 block text-xs text-muted-foreground">{new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings
+                              {scan.containment === "quarantined" && <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>}
+                              {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
+                            </span>
                           </span>
                           <span className={`self-center text-right text-sm font-medium capitalize ${verdictClass[scan.verdict as keyof typeof verdictClass] ?? "text-foreground"}`}>{scan.verdict}</span>
                           <span className="hidden self-center text-right font-mono text-lg sm:block">{scan.score}</span>
