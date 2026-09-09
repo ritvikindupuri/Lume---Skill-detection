@@ -145,14 +145,39 @@ export function WorkspaceDashboard() {
     const completed: ScanResult[] = [];
     try {
       for (const file of Array.from(files)) {
+        setThinking({ artifact: file.name, reasoning: "", steps: [{ label: "Reading the skill files", done: false }] });
         const artifact = await readArtifact([file]);
+        const fileList = artifact.files.map((item) => item.path).join(", ");
+        setThinking((current) => current && ({
+          ...current,
+          artifact: artifact.name,
+          steps: [
+            { label: `Read ${artifact.files.length} file${artifact.files.length === 1 ? "" : "s"}: ${fileList}`, done: true },
+            { label: `Running ${RULES.length + compiledChecks.length} deterministic checks`, done: false },
+          ],
+        }));
         const deterministic = await scanArtifact(artifact.name, artifact.files, policy, compiledChecks);
+        setThinking((current) => current && ({
+          ...current,
+          steps: [
+            { ...(current.steps[0] as ThinkingStep) },
+            { label: `Deterministic checks complete · ${deterministic.findings.length} finding${deterministic.findings.length === 1 ? "" : "s"}`, done: true },
+            { label: "GPT reviewing intent, combinations and evasion", done: false },
+          ],
+        }));
         const content = artifact.files.filter((item) => item.text !== null).map((item) => `--- FILE: ${item.path} ---\n${item.text}`).join("\n\n").slice(0, 500_000);
-        const ai = await analyzeWithAi({ data: {
-          artifactName: artifact.name,
-          content,
-          deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file: findingFile, line, evidence }) => ({ ruleId, title, severity, file: findingFile, line, evidence })),
-        } });
+        const ai = await streamAiScan(
+          {
+            artifactName: artifact.name,
+            content,
+            deterministicFindings: deterministic.findings.map(({ ruleId, title, severity, file: findingFile, line, evidence }) => ({ ruleId, title, severity, file: findingFile, line, evidence })),
+          },
+          (text) => setThinking((current) => current && { ...current, reasoning: current.reasoning + text }),
+        );
+        setThinking((current) => current && ({
+          ...current,
+          steps: current.steps.map((step, index) => (index === current.steps.length - 1 ? { label: `GPT review complete · ${ai.findings.length} additional finding${ai.findings.length === 1 ? "" : "s"}`, done: true } : step)),
+        }));
         const result = mergeAiFindings(deterministic, ai.findings, ai.model);
         completed.push(result);
         await saveScanFn({ data: {
