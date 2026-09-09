@@ -1,17 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDown, LockKeyhole } from "lucide-react";
+import { BrainCircuit, FileScan, Network, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SkillScanner } from "@/components/scanner/SkillScanner";
 import { Button } from "@/components/ui/button";
-import { RULES } from "@/lib/scanner/rules";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Aperture — Claude Skill Security" },
+      { title: "Lume — Claude Skill Security" },
       { name: "description", content: "Scan Claude skills with 35 security controls and the strongest GPT analysis for hidden intent, unsafe behavior, and data leakage." },
-      { property: "og:title", content: "Aperture — Claude Skill Security" },
-      { property: "og:description", content: "Know what a Claude skill will do before you trust it." },
+      { property: "og:title", content: "Lume — Claude Skill Security" },
+      { property: "og:description", content: "See the risk before it runs." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -33,56 +32,52 @@ function Index() {
       </header>
 
       <main>
-        <section className="relative flex min-h-[92vh] flex-col items-center justify-center px-5 pb-24 pt-32 text-center">
-          <div className="pointer-events-none absolute left-1/2 top-[42%] h-[560px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/8 blur-[120px]" />
-          <div className="relative animate-reveal">
-            <p className="mb-6 text-[15px] font-medium text-primary">Security for Claude skills</p>
-            <h1 className="text-gradient mx-auto max-w-5xl text-balance font-display text-6xl font-semibold leading-[0.98] sm:text-7xl lg:text-[96px]">
-              Know before it runs.
+        <section className="relative flex min-h-[94vh] flex-col items-center justify-center px-5 pb-20 pt-28 text-center">
+          <div className="animate-reveal">
+            <LogoMark className="mx-auto size-20 sm:size-24" />
+            <p className="mt-6 font-display text-2xl font-semibold">Lume</p>
+            <h1 className="mx-auto mt-8 max-w-4xl text-balance font-display text-5xl font-semibold leading-[1.02] sm:text-7xl lg:text-[88px]">
+              See the risk.
             </h1>
-            <p className="mx-auto mt-7 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Aperture combines 35 deterministic controls with the strongest GPT review to expose hidden intent, dangerous behavior, and data leakage.
+            <p className="mx-auto mt-5 max-w-lg text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Deep inspection for Claude skills.
             </p>
-            <div className="mt-9 flex items-center justify-center gap-3">
-              <Button asChild size="lg" className="h-12 rounded-full px-7 text-[15px] shadow-[0_10px_35px_color-mix(in_oklab,var(--color-primary)_25%,transparent)]">
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <Button asChild size="lg" className="h-12 rounded-2xl px-7 text-[15px] shadow-lg">
                 <a href="#scanner">Scan a skill</a>
               </Button>
-              <Button asChild variant="ghost" size="lg" className="h-12 rounded-full px-6 text-[15px] text-muted-foreground hover:text-foreground">
-                <a href="#scanner">See how it works <ArrowDown /></a>
+              <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-[15px]">
+                <Link to="/dashboard">For companies</Link>
               </Button>
             </div>
           </div>
 
-          <div className="relative mt-20 flex w-full max-w-4xl animate-reveal justify-center [animation-delay:180ms]">
-            <div className="absolute inset-x-[12%] bottom-0 h-20 bg-primary/20 blur-[70px]" />
-            <div className="glass-panel relative w-full overflow-hidden rounded-[28px] p-2 shadow-2xl sm:p-3">
-              <div className="flex min-h-[290px] flex-col items-center justify-center rounded-[21px] bg-secondary/65 px-6">
-                <div className="relative flex size-32 animate-float items-center justify-center rounded-full border border-border bg-card shadow-[0_24px_60px_color-mix(in_oklab,var(--color-background)_70%,transparent)]">
-                  <div className="absolute inset-3 rounded-full border border-primary/25" />
-                  <LockKeyhole className="size-8 text-primary" strokeWidth={1.5} />
-                </div>
-                <p className="mt-8 font-display text-xl font-medium">Ready to inspect</p>
-                <p className="mt-2 text-sm text-muted-foreground">Drop in a skill. Aperture sees through it.</p>
-              </div>
+          <div className="mt-16 grid w-full max-w-2xl animate-reveal grid-cols-3 gap-3 [animation-delay:180ms]">
+            <div className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+              <FileScan className="size-6 text-primary" strokeWidth={1.6} />
+              <span className="mt-3 text-xs font-medium">Instructions</span>
+            </div>
+            <div className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+              <BrainCircuit className="size-6 text-prism-violet" strokeWidth={1.6} />
+              <span className="mt-3 text-xs font-medium">Intent</span>
+            </div>
+            <div className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
+              <Network className="size-6 text-prism-pink" strokeWidth={1.6} />
+              <span className="mt-3 text-xs font-medium">Connections</span>
             </div>
           </div>
         </section>
 
-        <section className="border-y border-border bg-card/35 px-5 py-24 text-center sm:py-32">
-          <p className="mx-auto max-w-4xl text-balance font-display text-4xl font-medium leading-tight sm:text-6xl">
-            Every instruction. Every connection. Every dependency.
-          </p>
-          <div className="mx-auto mt-12 flex max-w-2xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-            <span>{RULES.length} security checks</span><span className="text-border">•</span><span>GPT intent analysis</span><span className="text-border">•</span><span>Evidence-backed findings</span>
-          </div>
+        <section className="border-y border-border bg-card px-5 py-20 text-center">
+          <Sparkles className="mx-auto size-7 text-primary" strokeWidth={1.5} />
+          <p className="mx-auto mt-5 max-w-3xl text-balance font-display text-3xl font-medium sm:text-5xl">Local rules. Deep AI review. Clear evidence.</p>
         </section>
 
         <section id="scanner" className="scroll-mt-14 px-4 py-24 sm:px-6 sm:py-32">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
-              <p className="text-sm font-medium text-primary">Aperture Scanner</p>
-              <h2 className="mt-3 font-display text-4xl font-semibold sm:text-6xl">See exactly what’s inside.</h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Choose a folder, ZIP, or SKILL.md. Local rules run first; skill text then receives a secure GPT review.</p>
+              <FileScan className="mx-auto size-7 text-primary" />
+              <h2 className="mt-4 font-display text-4xl font-semibold sm:text-6xl">Inspect a skill.</h2>
             </div>
             <SkillScanner />
           </div>
@@ -92,7 +87,7 @@ function Index() {
       <footer className="border-t border-border px-5 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-sm text-muted-foreground">
           <Logo />
-           <span>Local controls. Advanced AI review.</span>
+           <span>Claude skill security.</span>
         </div>
       </footer>
     </div>

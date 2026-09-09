@@ -6,5 +6,6 @@
 - [x] Expand and validate 35 real detection rules for hallucination, leakage, privacy, and bias
 - [x] Verify sign-in, scanning, saved results, and responsive layout
 - [x] Add strongest GPT intent analysis after deterministic scanning
-- [x] Replace Attest identity with Aperture and the selected synthetic-A mark
+- [x] Replace the rejected identity with Lume and the selected prism mark
+- [x] Simplify the landing page with minimal copy and icon-led security signals
 - [x] Verify AI detection, error handling, branding, and responsive layout

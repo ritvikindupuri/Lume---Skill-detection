@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({ meta: [
-    { title: "Signing in — Aperture" },
-    { name: "description", content: "Completing secure sign-in to Aperture." },
-    { property: "og:title", content: "Signing in — Aperture" },
+    { title: "Signing in — Lume" },
+    { name: "description", content: "Completing secure sign-in to Lume." },
+    { property: "og:title", content: "Signing in — Lume" },
     { property: "og:description", content: "Completing secure sign-in." },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },

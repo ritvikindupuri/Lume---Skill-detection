@@ -62,14 +62,14 @@ export const analyzeSkillWithAi = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const lovableApiKey = process.env["LOVABLE_API_KEY"];
     if (!lovableApiKey) throw new Error("Lovable AI is not configured for this workspace.");
-    const { createApertureAi } = await import("./ai-gateway.server");
-    const provider = createApertureAi(lovableApiKey);
+    const { createLumeAi } = await import("./ai-gateway.server");
+    const provider = createLumeAi(lovableApiKey);
     try {
       const result = streamText({
         model: provider.responses("openai/gpt-6-astra"),
         maxRetries: 2,
         providerOptions: { openai: { reasoningEffort: "max", forceReasoning: true } },
-        system: `You are Aperture's senior AI skill security analyst. Inspect Claude skill artifacts for malicious or unsafe intent that deterministic rules can miss: multi-step prompt injection, hidden trigger logic, data exfiltration, privacy abuse, unsafe agency, supply-chain compromise, hallucination inducement, discriminatory output bias, and evasion. Be conservative and evidence-bound. Never invent a finding. Report only behavior supported by an exact excerpt. Do not duplicate the supplied deterministic findings. Return only JSON with this shape: {"findings":[{"title":"...","severity":"critical|high|medium|low","layer":"prompt|agency|leakage|privacy|supply-chain|integrity|bias|resilience","file":"...","line":1,"evidence":"exact short excerpt","rationale":"...","remediation":"..."}]}. If there are no additional findings, return {"findings":[]}.`,
+        system: `You are Lume's senior AI skill security analyst. Inspect Claude skill artifacts for malicious or unsafe intent that deterministic rules can miss: multi-step prompt injection, hidden trigger logic, data exfiltration, privacy abuse, unsafe agency, supply-chain compromise, hallucination inducement, discriminatory output bias, and evasion. Be conservative and evidence-bound. Never invent a finding. Report only behavior supported by an exact excerpt. Do not duplicate the supplied deterministic findings. Return only JSON with this shape: {"findings":[{"title":"...","severity":"critical|high|medium|low","layer":"prompt|agency|leakage|privacy|supply-chain|integrity|bias|resilience","file":"...","line":1,"evidence":"exact short excerpt","rationale":"...","remediation":"..."}]}. If there are no additional findings, return {"findings":[]}.`,
         prompt: `Artifact: ${data.artifactName}\n\nAlready detected (do not duplicate):\n${JSON.stringify(data.deterministicFindings)}\n\nArtifact contents:\n${data.content}`,
       });
       const text = await result.text;
