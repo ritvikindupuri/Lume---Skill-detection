@@ -52,7 +52,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
       context.supabase.from("risk_settings").select("*").eq("organization_id", organization.id).single(),
       context.supabase
         .from("skill_scans")
-        .select("id, artifact_name, declared_name, score, verdict, findings_count, files_count, severity_counts, scanned_at")
+        .select("id, artifact_name, declared_name, score, verdict, findings_count, files_count, severity_counts, scanned_at, containment")
         .eq("organization_id", organization.id)
         .order("scanned_at", { ascending: false })
         .limit(100),
