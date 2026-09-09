@@ -14,6 +14,65 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_checks: {
+        Row: {
+          code: string
+          confidence: number
+          created_at: string
+          created_by: string
+          enabled: boolean
+          id: string
+          layer: string
+          organization_id: string
+          pattern: string
+          rationale: string
+          remediation: string
+          severity: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          confidence?: number
+          created_at?: string
+          created_by: string
+          enabled?: boolean
+          id?: string
+          layer: string
+          organization_id: string
+          pattern: string
+          rationale?: string
+          remediation?: string
+          severity: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          confidence?: number
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          id?: string
+          layer?: string
+          organization_id?: string
+          pattern?: string
+          rationale?: string
+          remediation?: string
+          severity?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_checks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -111,6 +170,7 @@ export type Database = {
       scan_findings: {
         Row: {
           category: string
+          confidence: number
           created_at: string
           evidence: string
           file_path: string
@@ -118,13 +178,17 @@ export type Database = {
           line_number: number
           organization_id: string
           remediation: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           rule_id: string
           scan_id: string
           severity: string
+          status: string
           title: string
         }
         Insert: {
           category: string
+          confidence?: number
           created_at?: string
           evidence: string
           file_path: string
@@ -132,13 +196,17 @@ export type Database = {
           line_number?: number
           organization_id: string
           remediation: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           rule_id: string
           scan_id: string
           severity: string
+          status?: string
           title: string
         }
         Update: {
           category?: string
+          confidence?: number
           created_at?: string
           evidence?: string
           file_path?: string
@@ -146,9 +214,12 @@ export type Database = {
           line_number?: number
           organization_id?: string
           remediation?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           rule_id?: string
           scan_id?: string
           severity?: string
+          status?: string
           title?: string
         }
         Relationships: [
