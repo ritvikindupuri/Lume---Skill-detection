@@ -210,6 +210,7 @@ export function WorkspaceDashboard() {
           rulesEvaluated: result.rulesEvaluated,
           counts: result.counts,
           scannedAt: result.scannedAt,
+          recommendation: ai.recommendation,
           findings: result.findings.map((finding) => ({ ...finding, category: LAYER_LABEL[finding.layer] })),
         } });
       }
