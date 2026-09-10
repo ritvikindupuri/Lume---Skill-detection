@@ -132,6 +132,36 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       </div>
 
       <div ref={bannerRef} />
+      {recommendation && recommendation.action !== "none" && (
+        <div className="border-b border-border bg-secondary/60 px-6 py-4">
+          <div className="flex items-start gap-3">
+            <Bot className="mt-0.5 size-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="font-medium">
+                AI recommends {recommendation.action === "quarantine" ? "quarantine" : "no containment"}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">{recommendation.confidence}% confidence</span>
+              </p>
+              {recommendation.reason && <p className="mt-1 text-sm text-muted-foreground">{recommendation.reason}</p>}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {recommendationStatus === "approved" ? "A reviewer approved this recommendation."
+                  : recommendationStatus === "rejected" ? "A reviewer rejected this recommendation."
+                  : recommendation.action === "quarantine" ? "Nothing is enforced until a person approves it."
+                  : "No approval needed — the AI found no reason to contain this skill."}
+              </p>
+              {canReview && recommendation.action === "quarantine" && recommendationStatus === "pending" && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" className="rounded-full" disabled={deciding} onClick={() => void resolveRecommendation("approve")}>
+                    {deciding ? <LoaderCircle className="animate-spin" /> : <ShieldBan />} Approve quarantine
+                  </Button>
+                  <Button size="sm" variant="outline" className="rounded-full" disabled={deciding} onClick={() => void resolveRecommendation("reject")}>
+                    {deciding ? <LoaderCircle className="animate-spin" /> : <XCircle />} Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {state === "quarantined" && (
         <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
           <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
