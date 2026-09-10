@@ -97,6 +97,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
         <Button variant="ghost" size="icon" onClick={onClose} title="Close"><X /></Button>
       </div>
 
+      <div ref={bannerRef} />
       {state === "quarantined" && (
         <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
           <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
