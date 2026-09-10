@@ -150,10 +150,10 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
               {canReview && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "confirmed")}>
-                    <CheckCircle2 /> Real risk
+                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
                   </Button>
                   <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
-                    <XCircle /> False positive
+                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
                   </Button>
                 </div>
               )}
