@@ -249,14 +249,36 @@ export function WorkspaceDashboard() {
         {message && <div className="mt-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>}
 
         <div className="mt-8 inline-flex rounded-full border border-border bg-card p-1 text-sm">
-          {(["overview", "checks"] as const).map((value) => (
+          {(["overview", "history", "checks"] as const).map((value) => (
             <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
               {value}
             </button>
           ))}
         </div>
 
-        {tab === "checks" ? (
+        {tab === "history" ? (
+          <div className="mt-8 space-y-8">
+            <ScanHistory
+              scans={workspace.scans as unknown as HistoryRow[]}
+              canEdit={canEdit}
+              selectedId={selected?.id}
+              onOpen={(scan) => setSelected(toSelection(scan))}
+              onChanged={async () => { setSelected(null); await refresh(); }}
+            />
+            {selected && (
+              <ScanDetail
+                scanId={selected.id}
+                name={selected.name}
+                policy={policy}
+                canReview={canEdit}
+                containment={selected.containment}
+                recommendation={selected.recommendation}
+                onClose={() => setSelected(null)}
+                onReviewed={refresh}
+              />
+            )}
+          </div>
+        ) : tab === "checks" ? (
           <div className="mt-8">
             <ChecksLibrary organizationId={workspace.organization.id} canEdit={canEdit} checks={checks} onChanged={refreshChecks} />
           </div>
