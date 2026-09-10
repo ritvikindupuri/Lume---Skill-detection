@@ -33,6 +33,20 @@ type HistoryScan = Workspace["scans"][number];
 
 const verdictClass = { clean: "text-safe", suspicious: "text-medium", malicious: "text-critical" } as const;
 
+function toSelection(scan: { id: string; artifact_name: string; declared_name: string | null; containment: string; ai_recommendation?: string; ai_recommendation_reason?: string; ai_recommendation_confidence?: number; recommendation_status?: string }) {
+  return {
+    id: scan.id,
+    name: scan.declared_name ?? scan.artifact_name,
+    containment: scan.containment,
+    recommendation: {
+      action: scan.ai_recommendation ?? "none",
+      reason: scan.ai_recommendation_reason ?? "",
+      confidence: scan.ai_recommendation_confidence ?? 0,
+      status: scan.recommendation_status ?? "none",
+    } satisfies ScanRecommendation,
+  };
+}
+
 function Trend({ scans }: { scans: HistoryScan[] }) {
   const recent = [...scans].slice(0, 20).reverse();
   if (recent.length < 2) return <div className="flex h-44 items-center justify-center text-sm text-muted-foreground">Scan two or more skills to see risk over time.</div>;
