@@ -57,7 +57,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
       context.supabase.from("risk_settings").select("*").eq("organization_id", organization.id).single(),
       context.supabase
         .from("skill_scans")
-        .select("id, artifact_name, declared_name, score, verdict, findings_count, files_count, severity_counts, scanned_at, containment")
+        .select("id, artifact_name, declared_name, sha256, score, verdict, findings_count, files_count, severity_counts, scanned_at, containment, ai_recommendation, ai_recommendation_reason, ai_recommendation_confidence, recommendation_status, recommendation_decided_at")
         .eq("organization_id", organization.id)
         .order("scanned_at", { ascending: false })
         .limit(100),
@@ -113,6 +113,10 @@ export const saveScan = createServerFn({ method: "POST" })
       rules_evaluated: data.rulesEvaluated,
       severity_counts: data.counts as Json,
       scanned_at: data.scannedAt,
+      ai_recommendation: data.recommendation?.action ?? "none",
+      ai_recommendation_reason: data.recommendation?.reason ?? "",
+      ai_recommendation_confidence: data.recommendation?.confidence ?? 0,
+      recommendation_status: data.recommendation?.action === "quarantine" ? "pending" : "none",
     }).select("id").single();
     if (inserted.error) throw new Error("Could not save the scan.");
     if (data.findings.length) {
