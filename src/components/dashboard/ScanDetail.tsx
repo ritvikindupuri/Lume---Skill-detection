@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceHint } from "@/components/dashboard/ConfidenceHint";
@@ -35,6 +36,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
   const [pending, setPending] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFindings(null);
@@ -48,13 +50,27 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
   const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
     setError(null);
+    const toastId = toast.loading(
+      status === "confirmed" ? "Recording a real risk…" : status === "false_positive" ? "Dismissing as a false positive…" : "Reopening this finding…",
+    );
     try {
       const result = await review({ data: { findingId: finding.id, scanId, status } });
       setFindings((current) => (current ?? []).map((item) => (item.id === finding.id ? { ...item, status } : item)));
       setOutcome(result);
       await onReviewed?.();
+      const detail = `New score ${result.score}/100 · ${result.verdict}`;
+      if (result.containment === "quarantined") {
+        toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: detail });
+      } else if (result.containment === "cleared") {
+        toast.success("Skill cleared for deployment", { id: toastId, description: detail });
+      } else {
+        toast.success("Decision saved and the skill re-scored", { id: toastId, description: detail });
+      }
+      bannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save this decision.");
+      const message = cause instanceof Error ? cause.message : "Could not save this decision.";
+      setError(message);
+      toast.error(message, { id: toastId });
     } finally {
       setPending(null);
     }
@@ -81,6 +97,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
         <Button variant="ghost" size="icon" onClick={onClose} title="Close"><X /></Button>
       </div>
 
+      <div ref={bannerRef} />
       {state === "quarantined" && (
         <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
           <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
@@ -133,10 +150,10 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
               {canReview && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "confirmed")}>
-                    <CheckCircle2 /> Real risk
+                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
                   </Button>
                   <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
-                    <XCircle /> False positive
+                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
                   </Button>
                 </div>
               )}
