@@ -13,7 +13,7 @@ export interface AiScanPayload {
 export async function streamAiScan(
   payload: AiScanPayload,
   onReasoning: (text: string) => void,
-): Promise<{ model: string; findings: Finding[] }> {
+): Promise<{ model: string; findings: Finding[]; recommendation: AiRecommendation | null }> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Your session expired. Sign in again.");
