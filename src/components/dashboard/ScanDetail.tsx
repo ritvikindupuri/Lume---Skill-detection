@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
+import { Bot, CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceHint } from "@/components/dashboard/ConfidenceHint";
 import { computeScore, type RiskConfig } from "@/lib/scanner/engine";
 import { confidenceLabel, type Severity } from "@/lib/scanner/rules";
-import { getScanFindings, reviewFinding } from "@/lib/workspace.functions";
+import { decideRecommendation, getScanFindings, reviewFinding } from "@/lib/workspace.functions";
 
 type StoredFinding = Awaited<ReturnType<typeof getScanFindings>>[number];
 
