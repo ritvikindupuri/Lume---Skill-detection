@@ -21,7 +21,8 @@ import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } fro
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
-import { ScanDetail } from "./ScanDetail";
+import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
+import { ScanHistory, type HistoryRow } from "./ScanHistory";
 import { ScoreExplainer } from "./ScoreExplainer";
 import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
 
@@ -66,8 +67,8 @@ export function WorkspaceDashboard() {
   const [scanning, setScanning] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [tab, setTab] = useState<"overview" | "checks">("overview");
-  const [selected, setSelected] = useState<{ id: string; name: string; containment: string } | null>(null);
+  const [tab, setTab] = useState<"overview" | "history" | "checks">("overview");
+  const [selected, setSelected] = useState<{ id: string; name: string; containment: string; recommendation: ScanRecommendation } | null>(null);
   const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
   const refresh = async () => {
