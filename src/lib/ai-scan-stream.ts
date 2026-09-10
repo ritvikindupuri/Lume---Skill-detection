@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { AiRecommendation } from "./ai-findings";
 import type { Finding } from "./scanner/engine";
 import type { Severity } from "./scanner/rules";
 
