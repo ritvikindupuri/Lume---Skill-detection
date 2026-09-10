@@ -241,6 +241,9 @@ export type Database = {
       }
       skill_scans: {
         Row: {
+          ai_recommendation: string
+          ai_recommendation_confidence: number
+          ai_recommendation_reason: string
           artifact_name: string
           contained_at: string | null
           contained_by: string | null
@@ -251,6 +254,9 @@ export type Database = {
           findings_count: number
           id: string
           organization_id: string
+          recommendation_decided_at: string | null
+          recommendation_decided_by: string | null
+          recommendation_status: string
           rules_evaluated: number
           scanned_at: string
           scanned_by: string
@@ -260,6 +266,9 @@ export type Database = {
           verdict: string
         }
         Insert: {
+          ai_recommendation?: string
+          ai_recommendation_confidence?: number
+          ai_recommendation_reason?: string
           artifact_name: string
           contained_at?: string | null
           contained_by?: string | null
@@ -270,6 +279,9 @@ export type Database = {
           findings_count?: number
           id?: string
           organization_id: string
+          recommendation_decided_at?: string | null
+          recommendation_decided_by?: string | null
+          recommendation_status?: string
           rules_evaluated?: number
           scanned_at?: string
           scanned_by: string
@@ -279,6 +291,9 @@ export type Database = {
           verdict: string
         }
         Update: {
+          ai_recommendation?: string
+          ai_recommendation_confidence?: number
+          ai_recommendation_reason?: string
           artifact_name?: string
           contained_at?: string | null
           contained_by?: string | null
@@ -289,6 +304,9 @@ export type Database = {
           findings_count?: number
           id?: string
           organization_id?: string
+          recommendation_decided_at?: string | null
+          recommendation_decided_by?: string | null
+          recommendation_status?: string
           rules_evaluated?: number
           scanned_at?: string
           scanned_by?: string
