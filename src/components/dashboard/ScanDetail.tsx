@@ -36,6 +36,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
   const [pending, setPending] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFindings(null);
