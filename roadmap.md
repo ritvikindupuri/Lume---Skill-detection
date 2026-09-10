@@ -20,3 +20,5 @@
 
 - [x] Live analysis log streaming the model reading each line during a scan
 - [x] Review actions quarantine or clear a scanned skill and re-score it
+- [x] Visible confirmation (toast, spinner, scroll-to-banner) when a finding is reviewed
+- [ ] Add teammates to a workspace (invite or join code) — waiting on the user's choice
