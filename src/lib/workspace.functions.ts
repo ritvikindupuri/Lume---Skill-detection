@@ -28,6 +28,11 @@ const scanSchema = z.object({
   rulesEvaluated: z.number().int().min(1),
   counts: z.object({ critical: z.number(), high: z.number(), medium: z.number(), low: z.number() }),
   scannedAt: z.string().datetime(),
+  recommendation: z.object({
+    action: z.enum(["quarantine", "allow"]),
+    reason: z.string().max(600),
+    confidence: z.number().int().min(0).max(100),
+  }).nullish(),
   findings: z.array(findingSchema).max(300),
 });
 
