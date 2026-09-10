@@ -49,13 +49,27 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
   const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
     setError(null);
+    const toastId = toast.loading(
+      status === "confirmed" ? "Recording a real risk…" : status === "false_positive" ? "Dismissing as a false positive…" : "Reopening this finding…",
+    );
     try {
       const result = await review({ data: { findingId: finding.id, scanId, status } });
       setFindings((current) => (current ?? []).map((item) => (item.id === finding.id ? { ...item, status } : item)));
       setOutcome(result);
       await onReviewed?.();
+      const detail = `New score ${result.score}/100 · ${result.verdict}`;
+      if (result.containment === "quarantined") {
+        toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: detail });
+      } else if (result.containment === "cleared") {
+        toast.success("Skill cleared for deployment", { id: toastId, description: detail });
+      } else {
+        toast.success("Decision saved and the skill re-scored", { id: toastId, description: detail });
+      }
+      bannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save this decision.");
+      const message = cause instanceof Error ? cause.message : "Could not save this decision.";
+      setError(message);
+      toast.error(message, { id: toastId });
     } finally {
       setPending(null);
     }
