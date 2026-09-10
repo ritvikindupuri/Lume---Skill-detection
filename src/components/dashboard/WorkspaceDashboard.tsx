@@ -21,7 +21,8 @@ import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } fro
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
-import { ScanDetail } from "./ScanDetail";
+import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
+import { ScanHistory, type HistoryRow } from "./ScanHistory";
 import { ScoreExplainer } from "./ScoreExplainer";
 import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
 
@@ -31,6 +32,20 @@ type Workspace = Awaited<ReturnType<typeof getWorkspace>>;
 type HistoryScan = Workspace["scans"][number];
 
 const verdictClass = { clean: "text-safe", suspicious: "text-medium", malicious: "text-critical" } as const;
+
+function toSelection(scan: { id: string; artifact_name: string; declared_name: string | null; containment: string; ai_recommendation?: string; ai_recommendation_reason?: string; ai_recommendation_confidence?: number; recommendation_status?: string }) {
+  return {
+    id: scan.id,
+    name: scan.declared_name ?? scan.artifact_name,
+    containment: scan.containment,
+    recommendation: {
+      action: scan.ai_recommendation ?? "none",
+      reason: scan.ai_recommendation_reason ?? "",
+      confidence: scan.ai_recommendation_confidence ?? 0,
+      status: scan.recommendation_status ?? "none",
+    } satisfies ScanRecommendation,
+  };
+}
 
 function Trend({ scans }: { scans: HistoryScan[] }) {
   const recent = [...scans].slice(0, 20).reverse();
@@ -66,8 +81,8 @@ export function WorkspaceDashboard() {
   const [scanning, setScanning] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [tab, setTab] = useState<"overview" | "checks">("overview");
-  const [selected, setSelected] = useState<{ id: string; name: string; containment: string } | null>(null);
+  const [tab, setTab] = useState<"overview" | "history" | "checks">("overview");
+  const [selected, setSelected] = useState<{ id: string; name: string; containment: string; recommendation: ScanRecommendation } | null>(null);
   const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
   const refresh = async () => {
@@ -195,6 +210,7 @@ export function WorkspaceDashboard() {
           rulesEvaluated: result.rulesEvaluated,
           counts: result.counts,
           scannedAt: result.scannedAt,
+          recommendation: ai.recommendation,
           findings: result.findings.map((finding) => ({ ...finding, category: LAYER_LABEL[finding.layer] })),
         } });
       }
@@ -248,14 +264,36 @@ export function WorkspaceDashboard() {
         {message && <div className="mt-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>}
 
         <div className="mt-8 inline-flex rounded-full border border-border bg-card p-1 text-sm">
-          {(["overview", "checks"] as const).map((value) => (
+          {(["overview", "history", "checks"] as const).map((value) => (
             <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
               {value}
             </button>
           ))}
         </div>
 
-        {tab === "checks" ? (
+        {tab === "history" ? (
+          <div className="mt-8 space-y-8">
+            <ScanHistory
+              scans={workspace.scans as unknown as HistoryRow[]}
+              canEdit={canEdit}
+              selectedId={selected?.id}
+              onOpen={(scan) => setSelected(toSelection(scan))}
+              onChanged={async () => { setSelected(null); await refresh(); }}
+            />
+            {selected && (
+              <ScanDetail
+                scanId={selected.id}
+                name={selected.name}
+                policy={policy}
+                canReview={canEdit}
+                containment={selected.containment}
+                recommendation={selected.recommendation}
+                onClose={() => setSelected(null)}
+                onReviewed={refresh}
+              />
+            )}
+          </div>
+        ) : tab === "checks" ? (
           <div className="mt-8">
             <ChecksLibrary organizationId={workspace.organization.id} canEdit={canEdit} checks={checks} onChanged={refreshChecks} />
           </div>
@@ -299,6 +337,7 @@ export function WorkspaceDashboard() {
                     policy={policy}
                     canReview={canEdit}
                     containment={selected.containment}
+                    recommendation={selected.recommendation}
                     onClose={() => setSelected(null)}
                     onReviewed={refresh}
                   />
@@ -314,7 +353,7 @@ export function WorkspaceDashboard() {
                         <button
                           type="button"
                           key={scan.id}
-                          onClick={() => setSelected({ id: scan.id, name: scan.declared_name ?? scan.artifact_name, containment: scan.containment })}
+                          onClick={() => setSelected(toSelection(scan))}
                           className={`grid w-full grid-cols-[1fr_auto] gap-4 px-6 py-4 text-left transition-colors hover:bg-secondary sm:grid-cols-[1fr_120px_120px] ${selected?.id === scan.id ? "bg-secondary" : ""}`}
                         >
                           <span className="min-w-0">

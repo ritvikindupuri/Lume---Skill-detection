@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { streamText } from "ai";
 import { z } from "zod";
-import { AI_MODEL, AI_SYSTEM_PROMPT, aiUserPrompt, extractJson, normalizeFindings } from "@/lib/ai-findings";
+import { AI_MODEL, AI_SYSTEM_PROMPT, aiUserPrompt, extractJson, normalizeFindings, normalizeRecommendation } from "@/lib/ai-findings";
 
 const bodySchema = z.object({
   artifactName: z.string().min(1).max(255),
@@ -81,8 +81,8 @@ export const Route = createFileRoute("/api/ai-scan")({
                 }
               }
               flushLog();
-              const findings = normalizeFindings(extractJson(output || (await result.text)));
-              send({ type: "done", model: AI_MODEL, findings });
+              const parsedJson = extractJson(output || (await result.text));
+              send({ type: "done", model: AI_MODEL, findings: normalizeFindings(parsedJson), recommendation: normalizeRecommendation(parsedJson) });
             } catch (error) {
               const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : undefined;
               const base = error instanceof Error ? error.message : "AI analysis failed.";

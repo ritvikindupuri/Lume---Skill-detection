@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
+import { Bot, CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceHint } from "@/components/dashboard/ConfidenceHint";
 import { computeScore, type RiskConfig } from "@/lib/scanner/engine";
 import { confidenceLabel, type Severity } from "@/lib/scanner/rules";
-import { getScanFindings, reviewFinding } from "@/lib/workspace.functions";
+import { decideRecommendation, getScanFindings, reviewFinding } from "@/lib/workspace.functions";
 
 type StoredFinding = Awaited<ReturnType<typeof getScanFindings>>[number];
 
@@ -17,35 +17,69 @@ const severityClass: Record<Severity, string> = {
   low: "text-muted-foreground",
 };
 
+export interface ScanRecommendation {
+  action: string;
+  reason: string;
+  confidence: number;
+  status: string;
+}
+
 interface Props {
   scanId: string;
   name: string;
   policy: RiskConfig;
   canReview: boolean;
   containment?: string;
+  recommendation?: ScanRecommendation;
   onClose: () => void;
   onReviewed?: () => void | Promise<void>;
 }
 
 type Outcome = { score: number; verdict: string; containment: string };
 
-export function ScanDetail({ scanId, name, policy, canReview, containment, onClose, onReviewed }: Props) {
+export function ScanDetail({ scanId, name, policy, canReview, containment, recommendation, onClose, onReviewed }: Props) {
   const load = useServerFn(getScanFindings);
   const review = useServerFn(reviewFinding);
+  const decideContainment = useServerFn(decideRecommendation);
   const [findings, setFindings] = useState<StoredFinding[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
+  const [deciding, setDeciding] = useState(false);
   const bannerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFindings(null);
     setOutcome(null);
     setError(null);
+    setDecisionStatus(null);
     void load({ data: { scanId } }).then(setFindings).catch(() => setFindings([]));
   }, [scanId]);
 
   const state = outcome?.containment ?? containment ?? "none";
+  const recommendationStatus = decisionStatus ?? recommendation?.status ?? "none";
+
+  const resolveRecommendation = async (decision: "approve" | "reject") => {
+    setDeciding(true);
+    const toastId = toast.loading(decision === "approve" ? "Quarantining this skill…" : "Rejecting the AI recommendation…");
+    try {
+      const result = await decideContainment({ data: { scanId, decision } });
+      setDecisionStatus(result.status);
+      setOutcome((current) => (current ? { ...current, containment: result.containment } : { score: adjusted.score, verdict: adjusted.verdict, containment: result.containment }));
+      await onReviewed?.();
+      if (decision === "approve") toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: "You approved the AI's containment call." });
+      else toast.success("Recommendation rejected", { id: toastId, description: "The skill stays available and the decision is on record." });
+      bannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Could not record this decision.";
+      setError(message);
+      toast.error(message, { id: toastId });
+    } finally {
+      setDeciding(false);
+    }
+  };
+
 
   const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
@@ -98,6 +132,36 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, onClo
       </div>
 
       <div ref={bannerRef} />
+      {recommendation && recommendation.action !== "none" && (
+        <div className="border-b border-border bg-secondary/60 px-6 py-4">
+          <div className="flex items-start gap-3">
+            <Bot className="mt-0.5 size-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              <p className="font-medium">
+                AI recommends {recommendation.action === "quarantine" ? "quarantine" : "no containment"}
+                <span className="ml-2 text-xs font-normal text-muted-foreground">{recommendation.confidence}% confidence</span>
+              </p>
+              {recommendation.reason && <p className="mt-1 text-sm text-muted-foreground">{recommendation.reason}</p>}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {recommendationStatus === "approved" ? "A reviewer approved this recommendation."
+                  : recommendationStatus === "rejected" ? "A reviewer rejected this recommendation."
+                  : recommendation.action === "quarantine" ? "Nothing is enforced until a person approves it."
+                  : "No approval needed — the AI found no reason to contain this skill."}
+              </p>
+              {canReview && recommendation.action === "quarantine" && recommendationStatus === "pending" && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" className="rounded-full" disabled={deciding} onClick={() => void resolveRecommendation("approve")}>
+                    {deciding ? <LoaderCircle className="animate-spin" /> : <ShieldBan />} Approve quarantine
+                  </Button>
+                  <Button size="sm" variant="outline" className="rounded-full" disabled={deciding} onClick={() => void resolveRecommendation("reject")}>
+                    {deciding ? <LoaderCircle className="animate-spin" /> : <XCircle />} Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {state === "quarantined" && (
         <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
           <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />

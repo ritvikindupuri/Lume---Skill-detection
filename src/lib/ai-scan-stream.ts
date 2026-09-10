@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { AiRecommendation } from "./ai-findings";
 import type { Finding } from "./scanner/engine";
 import type { Severity } from "./scanner/rules";
 
@@ -12,7 +13,7 @@ export interface AiScanPayload {
 export async function streamAiScan(
   payload: AiScanPayload,
   onReasoning: (text: string) => void,
-): Promise<{ model: string; findings: Finding[] }> {
+): Promise<{ model: string; findings: Finding[]; recommendation: AiRecommendation | null }> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Your session expired. Sign in again.");
@@ -27,7 +28,7 @@ export async function streamAiScan(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let result: { model: string; findings: Finding[] } | null = null;
+  let result: { model: string; findings: Finding[]; recommendation: AiRecommendation | null } | null = null;
   let failure: string | null = null;
 
   for (;;) {
@@ -39,9 +40,9 @@ export async function streamAiScan(
     for (const chunk of chunks) {
       const line = chunk.split("\n").find((item) => item.startsWith("data: "));
       if (!line) continue;
-      const event = JSON.parse(line.slice(6)) as { type: string; text?: string; message?: string; model?: string; findings?: Finding[] };
+      const event = JSON.parse(line.slice(6)) as { type: string; text?: string; message?: string; model?: string; findings?: Finding[]; recommendation?: AiRecommendation | null };
       if (event.type === "reasoning" && event.text) onReasoning(event.text);
-      else if (event.type === "done") result = { model: event.model ?? "openai/gpt-6-astra", findings: event.findings ?? [] };
+      else if (event.type === "done") result = { model: event.model ?? "openai/gpt-6-astra", findings: event.findings ?? [], recommendation: event.recommendation ?? null };
       else if (event.type === "error") failure = event.message ?? "AI analysis failed.";
     }
   }
