@@ -207,6 +207,40 @@ export const reviewFinding = createServerFn({ method: "POST" })
     return { score, verdict, containment };
   });
 
+export const decideRecommendation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    scanId: z.string().uuid(),
+    decision: z.enum(["approve", "reject"]),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const containment = data.decision === "approve" ? "quarantined" : "none";
+    const result = await context.supabase
+      .from("skill_scans")
+      .update({
+        recommendation_status: data.decision === "approve" ? "approved" : "rejected",
+        recommendation_decided_by: context.userId,
+        recommendation_decided_at: new Date().toISOString(),
+        containment,
+        contained_at: containment === "none" ? null : new Date().toISOString(),
+        contained_by: containment === "none" ? null : context.userId,
+      })
+      .eq("id", data.scanId);
+    if (result.error) throw new Error("Could not record this containment decision.");
+    return { containment, status: data.decision === "approve" ? "approved" : "rejected" };
+  });
+
+export const deleteScan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const result = await context.supabase.from("skill_scans").delete().eq("id", data.scanId);
+    if (result.error) throw new Error("Could not delete this scan.");
+    return { ok: true };
+  });
+
+
+
 const customCheckSchema = z.object({
   organizationId: z.string().uuid(),
   code: z.string().trim().regex(/^[A-Za-z0-9-]{3,20}$/, "Use 3–20 letters, numbers, or dashes."),
