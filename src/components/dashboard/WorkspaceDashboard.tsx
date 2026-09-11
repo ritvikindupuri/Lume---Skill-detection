@@ -111,13 +111,13 @@ function Trend({ scans }: { scans: HistoryScan[] }) {
         </div>
       </div>
       <div className="mt-2 flex items-center justify-between pl-12 text-[10px] text-muted-foreground">
-        <span>{new Date(recent[0].scanned_at).toLocaleDateString()}</span>
+        <span>{new Date(first.scanned_at).toLocaleDateString()}</span>
         <div className="flex items-center gap-3">
           {(["clean", "suspicious", "malicious"] as const).map((v) => (
             <span key={v} className="flex items-center gap-1 capitalize"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: VERDICT_COLORS[v] }} />{v}</span>
           ))}
         </div>
-        <span>{new Date(recent[recent.length - 1].scanned_at).toLocaleDateString()}</span>
+        <span>{new Date(last.scanned_at).toLocaleDateString()}</span>
       </div>
     </div>
   );
