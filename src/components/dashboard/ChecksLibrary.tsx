@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
+import { LoaderCircle, Plus, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { readArtifact } from "@/lib/scanner/load";
+import type { SuggestedCheck } from "@/lib/check-suggestions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +23,7 @@ import {
   deleteCustomCheck,
   listCustomChecks,
   setCustomCheckEnabled,
+  suggestCustomChecks,
 } from "@/lib/workspace.functions";
 
 export type CustomCheck = Awaited<ReturnType<typeof listCustomChecks>>[number];
