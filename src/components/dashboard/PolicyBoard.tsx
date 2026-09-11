@@ -119,7 +119,7 @@ export function PolicyBoard({ policy, onChange, scans, canSave, saving, onSave }
               <p className="label-mono">Live impact</p>
               <h2 className="mt-2 font-display text-xl font-medium">Your scans under these thresholds</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                {scans.length === 0 ? "Scan a skill to see how the policy would classify it." : `${distribution.clean ?? 0} clean · ${distribution.suspicious ?? 0} to review · ${distribution.malicious ?? 0} blocked${changed ? ` · ${changed} would change` : ""}`}
+                {scans.length === 0 ? "Scan a skill to see how the policy would classify it." : `${distribution["clean"] ?? 0} clean · ${distribution["suspicious"] ?? 0} to review · ${distribution["malicious"] ?? 0} blocked${changed ? ` · ${changed} would change` : ""}`}
               </p>
             </div>
             <SlidersHorizontal className="text-muted-foreground" />
