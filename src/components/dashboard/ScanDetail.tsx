@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Bot, CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
+import { Bot, CheckCircle2, Hourglass, LoaderCircle, ShieldBan, ShieldCheck, Undo2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceHint } from "@/components/dashboard/ConfidenceHint";
 import { computeScore, type RiskConfig } from "@/lib/scanner/engine";
