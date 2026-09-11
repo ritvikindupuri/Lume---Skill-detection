@@ -43,6 +43,8 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   const decideContainment = useServerFn(decideRecommendation);
   const [findings, setFindings] = useState<StoredFinding[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
