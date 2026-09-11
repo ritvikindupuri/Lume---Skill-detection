@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpRight, FileScan, LayoutGrid, LoaderCircle, LogOut, Settings2, ShieldAlert, Sparkles, Upload } from "lucide-react";
+import { ArrowUpRight, FileScan, LayoutGrid, LoaderCircle, LogOut, ShieldAlert, Upload } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DEFAULT_RISK_CONFIG,
@@ -23,10 +21,8 @@ import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { PolicyBoard, type PolicyScan } from "./PolicyBoard";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
-import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
 import { ScanHistory, type HistoryRow } from "./ScanHistory";
-import { ScoreExplainer } from "./ScoreExplainer";
 import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
 
 interface ThinkingState { artifact: string; steps: ThinkingStep[]; reasoning: string }
