@@ -320,9 +320,9 @@ export function WorkspaceDashboard() {
         {message && <div className="mt-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>}
 
         <div className="mt-8 inline-flex rounded-full border border-border bg-card p-1 text-sm">
-          {(["overview", "approvals", "policy", "history", "checks"] as const).map((value) => (
-            <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-              {value}
+          {([["overview", "Scan"], ["history", "History"], ["approvals", "Review queue"], ["checks", "Checks"], ["policy", "Policy"]] as const).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              {label}
             </button>
           ))}
         </div>
