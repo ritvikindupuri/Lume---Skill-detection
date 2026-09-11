@@ -82,7 +82,7 @@ export function WorkspaceDashboard() {
   const [scanning, setScanning] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [tab, setTab] = useState<"overview" | "history" | "checks">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "policy" | "history" | "checks">("overview");
   const [selected, setSelected] = useState<{ id: string; name: string; containment: string; recommendation: ScanRecommendation } | null>(null);
   const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
