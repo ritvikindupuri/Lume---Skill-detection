@@ -144,7 +144,7 @@ export const getScanFindings = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("scan_findings")
-      .select("id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status")
+      .select("id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status, review_note")
       .eq("scan_id", data.scanId)
       .order("severity", { ascending: true });
     if (result.error) throw new Error("Could not load the findings for this scan.");
