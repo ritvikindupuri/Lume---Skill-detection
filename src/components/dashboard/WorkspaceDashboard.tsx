@@ -75,11 +75,13 @@ function Trend({ scans }: { scans: HistoryScan[] }) {
             ))}
             <polyline points={points} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          {coords.map((c, index) => (
+          {coords.map((c, index) => {
+            const scan = recent[index]!;
+            return (
             <button
-              key={recent[index].id}
+              key={scan.id}
               type="button"
-              aria-label={`${recent[index].artifact_name}: score ${recent[index].score}, ${recent[index].verdict}`}
+              aria-label={`${scan.artifact_name}: score ${scan.score}, ${scan.verdict}`}
               className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
               style={{ left: `${c.x}%`, top: `${c.y}%` }}
               onMouseEnter={() => setHovered(index)}
