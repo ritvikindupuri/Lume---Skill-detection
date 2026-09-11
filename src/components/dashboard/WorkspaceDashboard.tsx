@@ -90,10 +90,11 @@ function Trend({ scans }: { scans: HistoryScan[] }) {
             >
               <span
                 className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background transition-transform"
-                style={{ backgroundColor: VERDICT_COLORS[recent[index].verdict] ?? "#6366f1", transform: `translate(-50%,-50%) scale(${hovered === index ? 1.6 : 1})` }}
+                style={{ backgroundColor: VERDICT_COLORS[scan.verdict] ?? "#6366f1", transform: `translate(-50%,-50%) scale(${hovered === index ? 1.6 : 1})` }}
               />
             </button>
-          ))}
+            );
+          })}
           {active && activeCoords && (
             <div
               className="pointer-events-none absolute z-10 w-44 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-xs shadow-lg"
