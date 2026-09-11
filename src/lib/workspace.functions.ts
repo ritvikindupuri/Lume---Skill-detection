@@ -157,11 +157,17 @@ export const reviewFinding = createServerFn({ method: "POST" })
     findingId: z.string().uuid(),
     scanId: z.string().uuid(),
     status: z.enum(["open", "pending_confirm", "confirmed", "false_positive"]),
+    note: z.string().max(2000).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("scan_findings")
-      .update({ status: data.status, reviewed_by: context.userId, reviewed_at: new Date().toISOString() })
+      .update({
+        status: data.status,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+        review_note: data.note?.trim() ?? "",
+      })
       .eq("id", data.findingId);
     if (result.error) throw new Error("Could not save this review decision.");
 
@@ -188,9 +194,10 @@ export const reviewFinding = createServerFn({ method: "POST" })
       blockOnCritical: settings.data.block_on_critical,
     });
 
+    const autoBlocked = settings.data.block_on_critical && counts.critical > 0;
     const confirmedSevere = rows.some((row) => row.status === "confirmed" && (row.severity === "critical" || row.severity === "high"));
     const allDismissed = rows.length > 0 && active.length === 0;
-    const containment = confirmedSevere ? "quarantined" : allDismissed || verdict === "clean" ? "cleared" : "none";
+    const containment = autoBlocked || confirmedSevere ? "quarantined" : allDismissed || verdict === "clean" ? "cleared" : "none";
 
     const updated = await context.supabase
       .from("skill_scans")
@@ -204,7 +211,7 @@ export const reviewFinding = createServerFn({ method: "POST" })
       .eq("id", data.scanId);
     if (updated.error) throw new Error("Decision saved, but the scan record could not be updated.");
 
-    return { score, verdict, containment };
+    return { score, verdict, containment, autoBlocked };
   });
 
 export const decideRecommendation = createServerFn({ method: "POST" })
