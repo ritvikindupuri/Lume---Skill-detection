@@ -81,11 +81,14 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   };
 
 
-  const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
+  const decide = async (finding: StoredFinding, status: "pending_confirm" | "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
     setError(null);
     const toastId = toast.loading(
-      status === "confirmed" ? "Recording a real risk…" : status === "false_positive" ? "Dismissing as a false positive…" : "Reopening this finding…",
+      status === "pending_confirm" ? "Sending for analyst approval…"
+        : status === "confirmed" ? "Approving this real risk…"
+        : status === "false_positive" ? "Dismissing as a false positive…"
+        : "Reverting this finding…",
     );
     try {
       const result = await review({ data: { findingId: finding.id, scanId, status } });
