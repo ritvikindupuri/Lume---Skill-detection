@@ -223,7 +223,19 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       </div>
 
       <div ref={bannerRef} />
-      {recommendation && recommendation.action !== "none" && (
+      {autoBlocked && (
+        <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
+          <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
+          <div>
+            <p className="font-medium text-critical">Auto-blocked by policy</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {counts.critical} critical {counts.critical === 1 ? "finding" : "findings"} matched, and your policy blocks any skill with a critical finding. This skill stays blocked — there is nothing to approve.
+              {canReview ? " The only way to change it is to dismiss the critical findings as false positives with a written reason." : ""}
+            </p>
+          </div>
+        </div>
+      )}
+      {recommendation && recommendation.action !== "none" && !autoBlocked && (
         <div className="border-b border-border bg-secondary/60 px-6 py-4">
           <div className="flex items-start gap-3">
             <Bot className="mt-0.5 size-5 shrink-0 text-primary" />
