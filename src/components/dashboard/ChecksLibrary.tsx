@@ -156,6 +156,50 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
 
   return (
     <div className="space-y-8">
+      {canEdit && (
+        <section className="rounded-xl border border-border bg-card">
+          <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="label-mono">Check author</p>
+              <h2 className="mt-2 flex items-center gap-2 font-display text-xl font-medium"><Sparkles className="size-5 text-primary" /> Write checks from your own skills</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Upload one or more skills. A separate AI pass reads them, compares against every existing check, and proposes new patterns grounded in what it actually found.</p>
+            </div>
+            <input ref={suggestInputRef} type="file" multiple accept=".md,.txt,.json,.yaml,.yml,.zip,.py,.js,.ts,.sh" className="hidden" onChange={(event) => void suggestFromFiles(event.target.files)} />
+            <Button variant="outline" className="rounded-full" disabled={suggesting} onClick={() => suggestInputRef.current?.click()}>
+              {suggesting ? <LoaderCircle className="animate-spin" /> : <Upload />} {suggesting ? "Reading skills…" : "Upload skills"}
+            </Button>
+          </div>
+          {(suggestNote || suggestions.length > 0) && (
+            <div className="space-y-4 px-6 py-5">
+              {suggestNote && <p className="text-sm text-muted-foreground">{suggestNote}</p>}
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.code} className="rounded-lg border border-border bg-background p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium"><span className="font-mono text-xs text-muted-foreground">{suggestion.code}</span> · {suggestion.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        <span className={severityClass[suggestion.severity]}>{suggestion.severity}</span> · {LAYER_LABEL[suggestion.layer]} · confidence {suggestion.confidence}%
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button size="sm" className="rounded-full" disabled={addingCode === suggestion.code} onClick={() => void acceptSuggestion(suggestion)}>
+                        {addingCode === suggestion.code ? <LoaderCircle className="animate-spin" /> : <Plus />} Add check
+                      </Button>
+                      <Button size="icon" variant="ghost" title="Dismiss" onClick={() => setSuggestions((current) => current.filter((item) => item.code !== suggestion.code))}>
+                        <X className="text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-3 break-all font-mono text-xs text-muted-foreground">/{suggestion.pattern}/i</p>
+                  {suggestion.evidence && <p className="mt-2 break-words font-mono text-xs text-muted-foreground">matched: “{suggestion.evidence}”</p>}
+                  {suggestion.rationale && <p className="mt-2 text-sm text-muted-foreground">{suggestion.rationale}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="rounded-xl border border-border bg-card">
         <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
