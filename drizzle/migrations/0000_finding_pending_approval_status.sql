@@ -1,0 +1,2 @@
+ALTER TABLE public.scan_findings DROP CONSTRAINT IF EXISTS scan_findings_status_check;
+ALTER TABLE public.scan_findings ADD CONSTRAINT scan_findings_status_check CHECK (status IN ('open','pending_confirm','confirmed','false_positive'));

@@ -156,7 +156,7 @@ export const reviewFinding = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({
     findingId: z.string().uuid(),
     scanId: z.string().uuid(),
-    status: z.enum(["open", "confirmed", "false_positive"]),
+    status: z.enum(["open", "pending_confirm", "confirmed", "false_positive"]),
   }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase

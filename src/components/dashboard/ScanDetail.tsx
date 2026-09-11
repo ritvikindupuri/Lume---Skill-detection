@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Bot, CheckCircle2, LoaderCircle, ShieldBan, ShieldCheck, X, XCircle } from "lucide-react";
+import { Bot, CheckCircle2, Hourglass, LoaderCircle, ShieldBan, ShieldCheck, Undo2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfidenceHint } from "@/components/dashboard/ConfidenceHint";
 import { computeScore, type RiskConfig } from "@/lib/scanner/engine";
@@ -81,11 +81,14 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   };
 
 
-  const decide = async (finding: StoredFinding, status: "confirmed" | "false_positive" | "open") => {
+  const decide = async (finding: StoredFinding, status: "pending_confirm" | "confirmed" | "false_positive" | "open") => {
     setPending(finding.id);
     setError(null);
     const toastId = toast.loading(
-      status === "confirmed" ? "Recording a real risk…" : status === "false_positive" ? "Dismissing as a false positive…" : "Reopening this finding…",
+      status === "pending_confirm" ? "Sending for analyst approval…"
+        : status === "confirmed" ? "Approving this real risk…"
+        : status === "false_positive" ? "Dismissing as a false positive…"
+        : "Reverting this finding…",
     );
     try {
       const result = await review({ data: { findingId: finding.id, scanId, status } });
@@ -93,7 +96,9 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       setOutcome(result);
       await onReviewed?.();
       const detail = `New score ${result.score}/100 · ${result.verdict}`;
-      if (result.containment === "quarantined") {
+      if (status === "pending_confirm") {
+        toast.success("Sent for analyst approval", { id: toastId, description: "The score and containment stay unchanged until an analyst approves it." });
+      } else if (result.containment === "quarantined") {
         toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: detail });
       } else if (result.containment === "cleared") {
         toast.success("Skill cleared for deployment", { id: toastId, description: detail });
@@ -119,6 +124,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   const all = findings ?? [];
   const groups = [
     { key: "open", title: "Needs review", empty: "Everything here has been reviewed.", items: all.filter((f) => f.status === "open") },
+    { key: "pending_confirm", title: "Pending analyst approval", empty: "Nothing is waiting for approval.", items: all.filter((f) => f.status === "pending_confirm") },
     { key: "confirmed", title: "Real risks", empty: "No findings confirmed as a real risk yet.", items: all.filter((f) => f.status === "confirmed") },
     { key: "false_positive", title: "False positives", empty: "Nothing dismissed as a false positive.", items: all.filter((f) => f.status === "false_positive") },
   ];
@@ -134,11 +140,25 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       <p className="mt-2 font-mono text-xs text-muted-foreground">{finding.file_path}:{finding.line_number}</p>
       <p className="mt-2 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">{finding.evidence}</p>
       <p className="mt-2 text-sm text-muted-foreground">{finding.remediation}</p>
+      {finding.status === "pending_confirm" && (
+        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Hourglass className="size-3.5" /> Waiting for an analyst to approve this as a real risk. The score is unchanged until then.</p>
+      )}
       {canReview && (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "confirmed")}>
-            {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
-          </Button>
+          {finding.status === "pending_confirm" ? (
+            <>
+              <Button size="sm" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "confirmed")}>
+                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Approve
+              </Button>
+              <Button size="sm" variant="outline" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "open")}>
+                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <Undo2 />} Revert
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "pending_confirm")}>
+              {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
+            </Button>
+          )}
           <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
             {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
           </Button>
