@@ -50,18 +50,70 @@ function toSelection(scan: { id: string; artifact_name: string; declared_name: s
   };
 }
 
+const VERDICT_COLORS: Record<string, string> = { clean: "#22c55e", suspicious: "#f59e0b", malicious: "#ef4444" };
+
 function Trend({ scans }: { scans: HistoryScan[] }) {
   const recent = [...scans].slice(0, 20).reverse();
+  const [hovered, setHovered] = useState<number | null>(null);
   if (recent.length < 2) return <div className="flex h-44 items-center justify-center text-sm text-muted-foreground">Scan two or more skills to see risk over time.</div>;
-  const points = recent.map((scan, index) => `${(index / (recent.length - 1)) * 100},${100 - scan.score}`).join(" ");
+  const coords = recent.map((scan, index) => ({ x: (index / (recent.length - 1)) * 100, y: 100 - scan.score }));
+  const points = coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const active = hovered !== null ? recent[hovered] : null;
+  const activeCoords = hovered !== null ? coords[hovered] : null;
   return (
-    <div className="h-44 w-full" aria-label="Risk score trend">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full overflow-visible">
-        <line x1="0" y1="20" x2="100" y2="20" className="stroke-border" vectorEffect="non-scaling-stroke" />
-        <line x1="0" y1="50" x2="100" y2="50" className="stroke-border" vectorEffect="non-scaling-stroke" />
-        <line x1="0" y1="80" x2="100" y2="80" className="stroke-border" vectorEffect="non-scaling-stroke" />
-        <polyline points={points} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+    <div aria-label="Risk score trend">
+      <div className="relative h-52" onMouseLeave={() => setHovered(null)}>
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex w-10 flex-col justify-between py-1 text-[10px] tabular-nums text-muted-foreground">
+          {[100, 75, 50, 25, 0].map((n) => <span key={n}>{n}</span>)}
+        </div>
+        <div className="absolute inset-y-0 left-12 right-0">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
+            {[0, 25, 50, 75, 100].map((n) => (
+              <line key={n} x1="0" y1={100 - n} x2="100" y2={100 - n} className="stroke-border" vectorEffect="non-scaling-stroke" strokeDasharray={n === 0 || n === 100 ? "0" : "1.5 1.5"} />
+            ))}
+            <polyline points={points} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {coords.map((c, index) => (
+            <button
+              key={recent[index].id}
+              type="button"
+              aria-label={`${recent[index].artifact_name}: score ${recent[index].score}, ${recent[index].verdict}`}
+              className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full"
+              style={{ left: `${c.x}%`, top: `${c.y}%` }}
+              onMouseEnter={() => setHovered(index)}
+              onFocus={() => setHovered(index)}
+              onBlur={() => setHovered(null)}
+            >
+              <span
+                className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background transition-transform"
+                style={{ backgroundColor: VERDICT_COLORS[recent[index].verdict] ?? "#6366f1", transform: `translate(-50%,-50%) scale(${hovered === index ? 1.6 : 1})` }}
+              />
+            </button>
+          ))}
+          {active && activeCoords && (
+            <div
+              className="pointer-events-none absolute z-10 w-44 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-xs shadow-lg"
+              style={{ left: `${Math.min(Math.max(activeCoords.x, 12), 88)}%`, top: `${activeCoords.y}%`, transform: `translate(-50%, ${activeCoords.y < 30 ? "12px" : "calc(-100% - 12px)"})` }}
+            >
+              <p className="truncate font-medium">{active.artifact_name}</p>
+              <p className="mt-1 text-muted-foreground">{new Date(active.scanned_at).toLocaleDateString()}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="font-display text-base font-semibold tabular-nums">{active.score}</span>
+                <span className="rounded-full px-2 py-0.5 capitalize text-[10px] font-medium" style={{ backgroundColor: `${VERDICT_COLORS[active.verdict] ?? "#6366f1"}20`, color: VERDICT_COLORS[active.verdict] ?? "#6366f1" }}>{active.verdict}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-2 flex items-center justify-between pl-12 text-[10px] text-muted-foreground">
+        <span>{new Date(recent[0].scanned_at).toLocaleDateString()}</span>
+        <div className="flex items-center gap-3">
+          {(["clean", "suspicious", "malicious"] as const).map((v) => (
+            <span key={v} className="flex items-center gap-1 capitalize"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: VERDICT_COLORS[v] }} />{v}</span>
+          ))}
+        </div>
+        <span>{new Date(recent[recent.length - 1].scanned_at).toLocaleDateString()}</span>
+      </div>
     </div>
   );
 }
