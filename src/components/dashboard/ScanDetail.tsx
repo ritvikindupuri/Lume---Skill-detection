@@ -96,7 +96,9 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       setOutcome(result);
       await onReviewed?.();
       const detail = `New score ${result.score}/100 · ${result.verdict}`;
-      if (result.containment === "quarantined") {
+      if (status === "pending_confirm") {
+        toast.success("Sent for analyst approval", { id: toastId, description: "The score and containment stay unchanged until an analyst approves it." });
+      } else if (result.containment === "quarantined") {
         toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: detail });
       } else if (result.containment === "cleared") {
         toast.success("Skill cleared for deployment", { id: toastId, description: detail });
