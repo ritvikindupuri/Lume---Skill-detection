@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpRight, FileScan, LayoutGrid, LoaderCircle, LogOut, Settings2, ShieldAlert, Sparkles, Upload } from "lucide-react";
+import { ArrowUpRight, FileScan, LayoutGrid, LoaderCircle, LogOut, ShieldAlert, Upload } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import {
   DEFAULT_RISK_CONFIG,
@@ -23,10 +21,8 @@ import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { PolicyBoard, type PolicyScan } from "./PolicyBoard";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
-import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
 import { ScanHistory, type HistoryRow } from "./ScanHistory";
-import { ScoreExplainer } from "./ScoreExplainer";
 import { ThinkingLog, type ThinkingStep } from "./ThinkingLog";
 
 interface ThinkingState { artifact: string; steps: ThinkingStep[]; reasoning: string }
@@ -304,7 +300,6 @@ export function WorkspaceDashboard() {
   );
 
   const canEdit = workspace.role === "admin" || workspace.role === "analyst";
-  const latest = queue[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -324,9 +319,9 @@ export function WorkspaceDashboard() {
         {message && <div className="mt-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>}
 
         <div className="mt-8 inline-flex rounded-full border border-border bg-card p-1 text-sm">
-          {(["overview", "approvals", "policy", "history", "checks"] as const).map((value) => (
-            <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-              {value}
+          {([["overview", "Scan"], ["history", "History"], ["approvals", "Review queue"], ["checks", "Checks"], ["policy", "Policy"]] as const).map(([value, label]) => (
+            <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              {label}
             </button>
           ))}
         </div>
@@ -374,139 +369,78 @@ export function WorkspaceDashboard() {
             <ChecksLibrary organizationId={workspace.organization.id} canEdit={canEdit} checks={checks} onChanged={refreshChecks} />
           </div>
         ) : (
-          <>
-            <section className="mt-8 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
+          <div className="mx-auto mt-8 max-w-3xl space-y-8">
+            <section className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
               {[{ label: "Scans", value: summary.total }, { label: "Average risk", value: `${summary.average}/100` }, { label: "Blocked", value: summary.blocked }].map((metric) => <div key={metric.label} className="bg-card p-6"><p className="label-mono">{metric.label}</p><p className="mt-3 font-display text-4xl font-medium">{metric.value}</p></div>)}
             </section>
 
-            <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-              <div className="space-y-8">
-                <section className="rounded-xl border border-border bg-card p-6"><div className="flex items-center justify-between"><div><p className="label-mono">Risk trend</p><h2 className="mt-2 font-display text-xl font-medium">Policy-adjusted score</h2></div><FileScan className="text-muted-foreground" /></div><div className="mt-8"><Trend scans={workspace.scans} /></div></section>
+            {thinking && (
+              <ThinkingLog artifact={thinking.artifact} steps={thinking.steps} reasoning={thinking.reasoning} active={scanning} />
+            )}
 
-                {thinking && (
-                  <ThinkingLog artifact={thinking.artifact} steps={thinking.steps} reasoning={thinking.reasoning} active={scanning} />
-                )}
-
-                {queue.length > 0 && (
-                  <section>
-                    <p className="label-mono mb-3">Latest batch</p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {queue.map((scan) => (
-                        <div key={scan.sha256} className="rounded-lg border border-border bg-card p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">{scan.metadata.name ?? scan.artifactName}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{scan.findings.length} findings · {scan.durationMs} ms{scan.ai ? ` · ${scan.ai.findings} from AI` : ""}</p>
-                            </div>
-                            <span className={`font-mono text-lg ${verdictClass[scan.verdict]}`}>{scan.score}</span>
-                          </div>
+            {queue.length > 0 && (
+              <section>
+                <p className="label-mono mb-3">Latest batch</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {queue.map((scan) => (
+                    <div key={scan.sha256} className="rounded-lg border border-border bg-card p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{scan.metadata.name ?? scan.artifactName}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{scan.findings.length} findings · {scan.durationMs} ms{scan.ai ? ` · ${scan.ai.findings} from AI` : ""}</p>
                         </div>
-                      ))}
+                        <span className={`font-mono text-lg ${verdictClass[scan.verdict]}`}>{scan.score}</span>
+                      </div>
                     </div>
-                  </section>
-                )}
+                  ))}
+                </div>
+              </section>
+            )}
 
-                {selected && (
-                  <ScanDetail
-                    scanId={selected.id}
-                    name={selected.name}
-                    policy={policy}
-                    canReview={canEdit}
-                    containment={selected.containment}
-                    recommendation={selected.recommendation}
-                    onClose={() => setSelected(null)}
-                    onReviewed={refresh}
-                  />
-                )}
+            <section className="rounded-xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between"><div><p className="label-mono">Risk trend</p><h2 className="mt-2 font-display text-xl font-medium">Scores over time</h2></div><FileScan className="text-muted-foreground" /></div>
+              <div className="mt-8"><Trend scans={workspace.scans} /></div>
+            </section>
 
-                <section className="overflow-hidden rounded-xl border border-border bg-card">
-                  <div className="border-b border-border px-6 py-5"><p className="label-mono">Scan history</p><h2 className="mt-2 font-display text-xl font-medium">All analyzed skills</h2><p className="mt-1 text-sm text-muted-foreground">Select a scan to review its findings and flag false positives.</p></div>
-                  {workspace.scans.length === 0 ? (
-                    <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center"><ShieldAlert className="text-muted-foreground" /><p className="mt-3 text-sm text-muted-foreground">No scans yet. Upload real skills to begin.</p></div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {workspace.scans.map((scan) => (
-                        <button
-                          type="button"
-                          key={scan.id}
-                          onClick={() => setSelected(toSelection(scan))}
-                          className={`grid w-full grid-cols-[1fr_auto] gap-4 px-6 py-4 text-left transition-colors hover:bg-secondary sm:grid-cols-[1fr_120px_120px] ${selected?.id === scan.id ? "bg-secondary" : ""}`}
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium">{scan.declared_name ?? scan.artifact_name}</span>
-                            <span className="mt-1 block text-xs text-muted-foreground">
-                              {new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings
-                              {policy.blockOnCritical && ((scan.severity_counts as Record<string, number> | null)?.["critical"] ?? 0) > 0 ? (
-                                <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Auto-blocked · critical</span>
-                              ) : scan.containment === "quarantined" ? (
-                                <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>
-                              ) : null}
-                              {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
-                            </span>
-                          </span>
-                          <span className={`self-center text-right text-sm font-medium capitalize ${verdictClass[scan.verdict as keyof typeof verdictClass] ?? "text-foreground"}`}>{scan.verdict}</span>
-                          <span className="hidden self-center text-right font-mono text-lg sm:block">{scan.score}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </section>
+            <section className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-6 py-5">
+                <div><p className="label-mono">Recent scans</p><h2 className="mt-2 font-display text-xl font-medium">Latest analyzed skills</h2></div>
+                {workspace.scans.length > 0 && <Button variant="ghost" size="sm" onClick={() => setTab("history")}>View all <ArrowUpRight /></Button>}
               </div>
-
-              <div className="space-y-8">
-                <aside className="h-fit rounded-xl border border-border bg-card p-6">
-                  <div className="flex items-center gap-3"><Settings2 className="text-primary" /><div><p className="font-medium">Risk policy</p><p className="text-xs text-muted-foreground">Changes the score and verdict.</p></div></div>
-                  <div className="mt-8">
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-1.5">Review threshold <PolicyHint label="What to set the review threshold to" title="Review threshold">
-                        <p>Above this raw score a skill stops being “clean” and is marked suspicious for a human to review.</p>
-                        <p><span className="text-foreground">Recommended 15–20.</span> 18 is the default and flags roughly anything with one high-severity match or a cluster of medium ones.</p>
-                        <p>Lower it (8–14) if you deploy skills widely or handle regulated data — you will review more skills. Raise it (25–35) only for trusted internal authors, since more real issues will pass as clean.</p>
-                      </PolicyHint></span>
-                      <span className="font-mono text-medium">{policy.acceptableScore}</span>
-                    </div>
-                    <Slider className="mt-4" min={0} max={98} step={1} value={[policy.acceptableScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, acceptableScore: Math.min(value ?? current.acceptableScore, current.maliciousScore - 1) }))} />
-                  </div>
-                  <div className="mt-8">
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-1.5">Block threshold <PolicyHint label="What to set the block threshold to" title="Block threshold">
-                        <p>At or above this raw score the verdict becomes malicious — the skill is not fit to deploy.</p>
-                        <p><span className="text-foreground">Recommended 50–60.</span> 55 is the default and needs either a critical match or several serious ones together.</p>
-                        <p>Keep at least 25 points between the two thresholds so there is a real review band. Setting it below 40 will block skills on heuristics alone; above 70 almost nothing blocks automatically.</p>
-                      </PolicyHint></span>
-                      <span className="font-mono text-critical">{policy.maliciousScore}</span>
-                    </div>
-                    <Slider className="mt-4" min={1} max={100} step={1} value={[policy.maliciousScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, maliciousScore: Math.max(value ?? current.maliciousScore, current.acceptableScore + 1) }))} />
-                  </div>
-                  <div className="mt-8 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-sm">Block critical findings <PolicyHint label="Whether to block on critical findings" title="Block critical findings">
-                        <p>When on, a single critical match makes the verdict malicious no matter how low the score is.</p>
-                        <p><span className="text-foreground">Recommended on.</span> Critical checks cover credential theft, exfiltration and remote code execution, which are never acceptable in one-off form.</p>
-                        <p>Turn it off only if your team triages every scan by hand and prefers score-based judgement — a lone critical match will then be scored, not blocked.</p>
-                      </PolicyHint></p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">A critical match is malicious regardless of score.</p>
-                    </div>
-                    <Switch checked={policy.blockOnCritical} onCheckedChange={(checked) => setPolicy((current) => ({ ...current, blockOnCritical: checked }))} />
-                  </div>
-                  <Button className="mt-8 w-full rounded-full" disabled={savingPolicy || workspace.role !== "admin"} onClick={() => void savePolicy()}>{savingPolicy && <LoaderCircle className="animate-spin" />}Save policy</Button>
-                  {workspace.role !== "admin" && <p className="mt-3 text-center text-xs text-muted-foreground">Only workspace administrators can change policy.</p>}
-                </aside>
-
-                <ScoreExplainer
-                  policy={policy}
-                  {...(latest ? { breakdown: latest.breakdown, rawScore: latest.rawScore, score: latest.score, label: latest.metadata.name ?? latest.artifactName } : {})}
-                />
-
-                <section className="rounded-xl border border-border bg-card p-6">
-                  <div className="flex items-center gap-3"><Sparkles className="text-primary" /><p className="font-medium">What this can and cannot do</p></div>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    Built-in checks are pattern-based, so they are repeatable and always quote the exact line they matched — but they can miss novel or obfuscated behaviour and can flag legitimate content. Each finding shows a confidence estimate, and reviewers can mark false positives so the record reflects a human decision.
-                  </p>
-                </section>
-              </div>
-            </div>
-          </>
+              {workspace.scans.length === 0 ? (
+                <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center">
+                  <ShieldAlert className="text-muted-foreground" />
+                  <p className="mt-3 text-sm text-muted-foreground">No scans yet. Upload skills with the button above to begin.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {workspace.scans.slice(0, 5).map((scan) => (
+                    <button
+                      type="button"
+                      key={scan.id}
+                      onClick={() => { setSelected(toSelection(scan)); setTab("history"); }}
+                      className="grid w-full grid-cols-[1fr_auto] gap-4 px-6 py-4 text-left transition-colors hover:bg-secondary sm:grid-cols-[1fr_120px_120px]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{scan.declared_name ?? scan.artifact_name}</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings
+                          {policy.blockOnCritical && ((scan.severity_counts as Record<string, number> | null)?.["critical"] ?? 0) > 0 ? (
+                            <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Auto-blocked · critical</span>
+                          ) : scan.containment === "quarantined" ? (
+                            <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>
+                          ) : null}
+                          {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
+                        </span>
+                      </span>
+                      <span className={`self-center text-right text-sm font-medium capitalize ${verdictClass[scan.verdict as keyof typeof verdictClass] ?? "text-foreground"}`}>{scan.verdict}</span>
+                      <span className="hidden self-center text-right font-mono text-lg sm:block">{scan.score}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
         )}
       </main>
     </div>
