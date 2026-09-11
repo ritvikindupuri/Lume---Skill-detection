@@ -20,6 +20,8 @@ import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
+import { ApprovalQueue } from "./ApprovalQueue";
+import { PolicyBoard, type PolicyScan } from "./PolicyBoard";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
 import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
