@@ -316,7 +316,17 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
                   <p><span className="text-foreground">Confidence:</span> {confidence}% — {confidenceLabel(confidence)} <ConfidenceHint /></p>
                   <p><span className="text-foreground">Why it matters:</span> {rule.rationale}</p>
                   <p><span className="text-foreground">How to fix it:</span> {rule.remediation}</p>
-                  <p className="break-all font-mono text-xs">{rule.pattern.source.length > 400 ? "structural check — evaluated on file metadata" : `/${rule.pattern.source}/i`}</p>
+                  <div>
+                    <p className="text-foreground">Exact text this check looks for:</p>
+                    {rule.pattern.source.length > 400 ? (
+                      <p className="mt-1.5 text-xs">Structural check — instead of matching text, it inspects the skill's declared details (such as a missing author or licence).</p>
+                    ) : (
+                      <>
+                        <p className="mt-1.5 break-all rounded-md border border-border bg-background p-2.5 font-mono text-xs text-foreground">/{rule.pattern.source}/i</p>
+                        <p className="mt-1.5 text-xs">This is the literal search pattern, run line by line and ignoring upper/lower case. <span className="font-mono">|</span> means “or”, <span className="font-mono">\s+</span> means “one or more spaces”, and <span className="font-mono">\b</span> means “whole word only”.</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </details>
             );
