@@ -21,6 +21,7 @@ import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } fro
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
+import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
 import { ScanHistory, type HistoryRow } from "./ScanHistory";
 import { ScoreExplainer } from "./ScoreExplainer";
