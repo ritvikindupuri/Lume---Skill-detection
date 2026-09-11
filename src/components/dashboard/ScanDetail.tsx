@@ -124,6 +124,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   const all = findings ?? [];
   const groups = [
     { key: "open", title: "Needs review", empty: "Everything here has been reviewed.", items: all.filter((f) => f.status === "open") },
+    { key: "pending_confirm", title: "Pending analyst approval", empty: "Nothing is waiting for approval.", items: all.filter((f) => f.status === "pending_confirm") },
     { key: "confirmed", title: "Real risks", empty: "No findings confirmed as a real risk yet.", items: all.filter((f) => f.status === "confirmed") },
     { key: "false_positive", title: "False positives", empty: "Nothing dismissed as a false positive.", items: all.filter((f) => f.status === "false_positive") },
   ];
