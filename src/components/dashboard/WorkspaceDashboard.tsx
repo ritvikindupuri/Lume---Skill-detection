@@ -21,6 +21,7 @@ import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } fro
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
+import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
 import { ScanHistory, type HistoryRow } from "./ScanHistory";
 import { ScoreExplainer } from "./ScoreExplainer";
@@ -376,9 +377,39 @@ export function WorkspaceDashboard() {
               <div className="space-y-8">
                 <aside className="h-fit rounded-xl border border-border bg-card p-6">
                   <div className="flex items-center gap-3"><Settings2 className="text-primary" /><div><p className="font-medium">Risk policy</p><p className="text-xs text-muted-foreground">Changes the score and verdict.</p></div></div>
-                  <div className="mt-8"><div className="flex justify-between text-sm"><span>Review threshold</span><span className="font-mono text-medium">{policy.acceptableScore}</span></div><Slider className="mt-4" min={0} max={98} step={1} value={[policy.acceptableScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, acceptableScore: Math.min(value ?? current.acceptableScore, current.maliciousScore - 1) }))} /></div>
-                  <div className="mt-8"><div className="flex justify-between text-sm"><span>Block threshold</span><span className="font-mono text-critical">{policy.maliciousScore}</span></div><Slider className="mt-4" min={1} max={100} step={1} value={[policy.maliciousScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, maliciousScore: Math.max(value ?? current.maliciousScore, current.acceptableScore + 1) }))} /></div>
-                  <div className="mt-8 flex items-center justify-between gap-4"><div><p className="text-sm">Block critical findings</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A critical match is malicious regardless of score.</p></div><Switch checked={policy.blockOnCritical} onCheckedChange={(checked) => setPolicy((current) => ({ ...current, blockOnCritical: checked }))} /></div>
+                  <div className="mt-8">
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1.5">Review threshold <PolicyHint label="What to set the review threshold to" title="Review threshold">
+                        <p>Above this raw score a skill stops being “clean” and is marked suspicious for a human to review.</p>
+                        <p><span className="text-foreground">Recommended 15–20.</span> 18 is the default and flags roughly anything with one high-severity match or a cluster of medium ones.</p>
+                        <p>Lower it (8–14) if you deploy skills widely or handle regulated data — you will review more skills. Raise it (25–35) only for trusted internal authors, since more real issues will pass as clean.</p>
+                      </PolicyHint></span>
+                      <span className="font-mono text-medium">{policy.acceptableScore}</span>
+                    </div>
+                    <Slider className="mt-4" min={0} max={98} step={1} value={[policy.acceptableScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, acceptableScore: Math.min(value ?? current.acceptableScore, current.maliciousScore - 1) }))} />
+                  </div>
+                  <div className="mt-8">
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1.5">Block threshold <PolicyHint label="What to set the block threshold to" title="Block threshold">
+                        <p>At or above this raw score the verdict becomes malicious — the skill is not fit to deploy.</p>
+                        <p><span className="text-foreground">Recommended 50–60.</span> 55 is the default and needs either a critical match or several serious ones together.</p>
+                        <p>Keep at least 25 points between the two thresholds so there is a real review band. Setting it below 40 will block skills on heuristics alone; above 70 almost nothing blocks automatically.</p>
+                      </PolicyHint></span>
+                      <span className="font-mono text-critical">{policy.maliciousScore}</span>
+                    </div>
+                    <Slider className="mt-4" min={1} max={100} step={1} value={[policy.maliciousScore]} onValueChange={([value]) => setPolicy((current) => ({ ...current, maliciousScore: Math.max(value ?? current.maliciousScore, current.acceptableScore + 1) }))} />
+                  </div>
+                  <div className="mt-8 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="flex items-center gap-1.5 text-sm">Block critical findings <PolicyHint label="Whether to block on critical findings" title="Block critical findings">
+                        <p>When on, a single critical match makes the verdict malicious no matter how low the score is.</p>
+                        <p><span className="text-foreground">Recommended on.</span> Critical checks cover credential theft, exfiltration and remote code execution, which are never acceptable in one-off form.</p>
+                        <p>Turn it off only if your team triages every scan by hand and prefers score-based judgement — a lone critical match will then be scored, not blocked.</p>
+                      </PolicyHint></p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">A critical match is malicious regardless of score.</p>
+                    </div>
+                    <Switch checked={policy.blockOnCritical} onCheckedChange={(checked) => setPolicy((current) => ({ ...current, blockOnCritical: checked }))} />
+                  </div>
                   <Button className="mt-8 w-full rounded-full" disabled={savingPolicy || workspace.role !== "admin"} onClick={() => void savePolicy()}>{savingPolicy && <LoaderCircle className="animate-spin" />}Save policy</Button>
                   {workspace.role !== "admin" && <p className="mt-3 text-center text-xs text-muted-foreground">Only workspace administrators can change policy.</p>}
                 </aside>

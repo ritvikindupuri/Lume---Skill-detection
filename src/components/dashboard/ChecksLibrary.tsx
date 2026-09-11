@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
+import { LoaderCircle, Plus, Search, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { readArtifact } from "@/lib/scanner/load";
+import type { SuggestedCheck } from "@/lib/check-suggestions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +23,7 @@ import {
   deleteCustomCheck,
   listCustomChecks,
   setCustomCheckEnabled,
+  suggestCustomChecks,
 } from "@/lib/workspace.functions";
 
 export type CustomCheck = Awaited<ReturnType<typeof listCustomChecks>>[number];
@@ -74,6 +77,68 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
     );
   }, [query]);
 
+  const suggest = useServerFn(suggestCustomChecks);
+  const suggestInputRef = useRef<HTMLInputElement>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedCheck[]>([]);
+  const [suggestNote, setSuggestNote] = useState<string | null>(null);
+  const [addingCode, setAddingCode] = useState<string | null>(null);
+
+  const suggestFromFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setSuggesting(true);
+    setSuggestNote(null);
+    setSuggestions([]);
+    try {
+      const artifacts: { name: string; content: string }[] = [];
+      for (const file of Array.from(files)) {
+        const artifact = await readArtifact([file]);
+        const content = artifact.files
+          .filter((item) => item.text !== null)
+          .map((item) => `--- FILE: ${item.path} ---\n${item.text}`)
+          .join("\n\n");
+        if (content.trim()) artifacts.push({ name: artifact.name, content });
+      }
+      if (!artifacts.length) throw new Error("No readable text was found in these files.");
+      const result = await suggest({ data: { organizationId, artifacts } });
+      setSuggestions(result.suggestions);
+      setSuggestNote(
+        result.suggestions.length
+          ? `${result.suggestions.length} suggestion${result.suggestions.length === 1 ? "" : "s"} from ${artifacts.length} skill${artifacts.length === 1 ? "" : "s"}.`
+          : "The AI found nothing worth adding beyond your current checks.",
+      );
+    } catch (cause) {
+      setSuggestNote(cause instanceof Error ? cause.message : "Could not analyze these skills.");
+    } finally {
+      setSuggesting(false);
+      if (suggestInputRef.current) suggestInputRef.current.value = "";
+    }
+  };
+
+  const acceptSuggestion = async (suggestion: SuggestedCheck) => {
+    setAddingCode(suggestion.code);
+    setSuggestNote(null);
+    try {
+      await create({ data: {
+        organizationId,
+        code: suggestion.code,
+        title: suggestion.title,
+        severity: suggestion.severity,
+        layer: suggestion.layer,
+        pattern: suggestion.pattern,
+        rationale: suggestion.rationale,
+        remediation: suggestion.remediation,
+        confidence: suggestion.confidence,
+      } });
+      setSuggestions((current) => current.filter((item) => item.code !== suggestion.code));
+      await onChanged();
+    } catch (cause) {
+      setSuggestNote(cause instanceof Error ? cause.message : "Could not add this check.");
+    } finally {
+      setAddingCode(null);
+    }
+  };
+
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -91,6 +156,50 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
 
   return (
     <div className="space-y-8">
+      {canEdit && (
+        <section className="rounded-xl border border-border bg-card">
+          <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="label-mono">Check author</p>
+              <h2 className="mt-2 flex items-center gap-2 font-display text-xl font-medium"><Sparkles className="size-5 text-primary" /> Write checks from your own skills</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Upload one or more skills. A separate AI pass reads them, compares against every existing check, and proposes new patterns grounded in what it actually found.</p>
+            </div>
+            <input ref={suggestInputRef} type="file" multiple accept=".md,.txt,.json,.yaml,.yml,.zip,.py,.js,.ts,.sh" className="hidden" onChange={(event) => void suggestFromFiles(event.target.files)} />
+            <Button variant="outline" className="rounded-full" disabled={suggesting} onClick={() => suggestInputRef.current?.click()}>
+              {suggesting ? <LoaderCircle className="animate-spin" /> : <Upload />} {suggesting ? "Reading skills…" : "Upload skills"}
+            </Button>
+          </div>
+          {(suggestNote || suggestions.length > 0) && (
+            <div className="space-y-4 px-6 py-5">
+              {suggestNote && <p className="text-sm text-muted-foreground">{suggestNote}</p>}
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.code} className="rounded-lg border border-border bg-background p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium"><span className="font-mono text-xs text-muted-foreground">{suggestion.code}</span> · {suggestion.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        <span className={severityClass[suggestion.severity]}>{suggestion.severity}</span> · {LAYER_LABEL[suggestion.layer]} · confidence {suggestion.confidence}%
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button size="sm" className="rounded-full" disabled={addingCode === suggestion.code} onClick={() => void acceptSuggestion(suggestion)}>
+                        {addingCode === suggestion.code ? <LoaderCircle className="animate-spin" /> : <Plus />} Add check
+                      </Button>
+                      <Button size="icon" variant="ghost" title="Dismiss" onClick={() => setSuggestions((current) => current.filter((item) => item.code !== suggestion.code))}>
+                        <X className="text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="mt-3 break-all font-mono text-xs text-muted-foreground">/{suggestion.pattern}/i</p>
+                  {suggestion.evidence && <p className="mt-2 break-words font-mono text-xs text-muted-foreground">matched: “{suggestion.evidence}”</p>}
+                  {suggestion.rationale && <p className="mt-2 text-sm text-muted-foreground">{suggestion.rationale}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="rounded-xl border border-border bg-card">
         <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
