@@ -58,8 +58,10 @@ function Trend({ scans }: { scans: HistoryScan[] }) {
   if (recent.length < 2) return <div className="flex h-44 items-center justify-center text-sm text-muted-foreground">Scan two or more skills to see risk over time.</div>;
   const coords = recent.map((scan, index) => ({ x: (index / (recent.length - 1)) * 100, y: 100 - scan.score }));
   const points = coords.map((c) => `${c.x},${c.y}`).join(" ");
-  const active = hovered !== null ? recent[hovered] : null;
-  const activeCoords = hovered !== null ? coords[hovered] : null;
+  const active = hovered !== null ? (recent[hovered] ?? null) : null;
+  const activeCoords = hovered !== null ? (coords[hovered] ?? null) : null;
+  const first = recent[0]!;
+  const last = recent[recent.length - 1]!;
   return (
     <div aria-label="Risk score trend">
       <div className="relative h-52" onMouseLeave={() => setHovered(null)}>
