@@ -194,34 +194,21 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       ) : findings.length === 0 ? (
         <p className="px-6 py-8 text-sm text-muted-foreground">No findings were recorded for this scan.</p>
       ) : (
-        <div className="divide-y divide-border">
-          {findings.map((finding) => (
-            <div key={finding.id} className={`px-6 py-5 ${finding.status === "false_positive" ? "opacity-55" : ""}`}>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-mono text-xs text-muted-foreground">{finding.rule_id}</span>
-                <span className="font-medium">{finding.title}</span>
-                <span className={`text-xs font-medium ${severityClass[finding.severity as Severity]}`}>{finding.severity}</span>
-                <span className="text-xs text-muted-foreground">{finding.confidence}% · {confidenceLabel(finding.confidence)} <ConfidenceHint /></span>
-                {finding.status !== "open" && (
-                  <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                    {finding.status === "confirmed" ? "Confirmed" : "False positive"}
-                  </span>
-                )}
+        <div>
+          {groups.map((group) => (
+            <section key={group.key}>
+              <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/40 px-6 py-3">
+                <p className="text-sm font-medium">{group.title}</p>
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">{group.items.length}</span>
               </div>
-              <p className="mt-2 font-mono text-xs text-muted-foreground">{finding.file_path}:{finding.line_number}</p>
-              <p className="mt-2 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">{finding.evidence}</p>
-              <p className="mt-2 text-sm text-muted-foreground">{finding.remediation}</p>
-              {canReview && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "confirmed")}>
-                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
-                  </Button>
-                  <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
-                    {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
-                  </Button>
+              {group.items.length === 0 ? (
+                <p className="border-b border-border px-6 py-4 text-sm text-muted-foreground">{group.empty}</p>
+              ) : (
+                <div className="divide-y divide-border border-b border-border">
+                  {group.items.map((finding) => renderFinding(finding))}
                 </div>
               )}
-            </div>
+            </section>
           ))}
         </div>
       )}
