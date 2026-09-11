@@ -43,6 +43,8 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   const decideContainment = useServerFn(decideRecommendation);
   const [findings, setFindings] = useState<StoredFinding[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [decisionStatus, setDecisionStatus] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   };
 
 
-  const decide = async (finding: StoredFinding, status: "pending_confirm" | "confirmed" | "false_positive" | "open") => {
+  const decide = async (finding: StoredFinding, status: "pending_confirm" | "confirmed" | "false_positive" | "open", note?: string) => {
     setPending(finding.id);
     setError(null);
     const toastId = toast.loading(
@@ -91,15 +93,17 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
         : "Reverting this finding…",
     );
     try {
-      const result = await review({ data: { findingId: finding.id, scanId, status } });
-      setFindings((current) => (current ?? []).map((item) => (item.id === finding.id ? { ...item, status } : item)));
+      const result = await review({ data: { findingId: finding.id, scanId, status, note: note ?? "" } });
+      setFindings((current) => (current ?? []).map((item) => (item.id === finding.id ? { ...item, status, review_note: note ?? "" } : item)));
       setOutcome(result);
+      setNoteFor(null);
+      setNote("");
       await onReviewed?.();
       const detail = `New score ${result.score}/100 · ${result.verdict}`;
       if (status === "pending_confirm") {
         toast.success("Sent for analyst approval", { id: toastId, description: "The score and containment stay unchanged until an analyst approves it." });
       } else if (result.containment === "quarantined") {
-        toast.error("Skill quarantined — not safe to deploy", { id: toastId, description: detail });
+        toast.error("Skill blocked — not safe to deploy", { id: toastId, description: detail });
       } else if (result.containment === "cleared") {
         toast.success("Skill cleared for deployment", { id: toastId, description: detail });
       } else {
@@ -120,6 +124,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
   for (const finding of active) counts[finding.severity as Severity] += 1;
   const adjusted = computeScore(counts, policy);
   const dismissed = (findings ?? []).length - active.length;
+  const autoBlocked = policy.blockOnCritical && counts.critical > 0;
 
   const all = findings ?? [];
   const groups = [
@@ -143,26 +148,61 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       {finding.status === "pending_confirm" && (
         <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Hourglass className="size-3.5" /> Waiting for an analyst to approve this as a real risk. The score is unchanged until then.</p>
       )}
+      {finding.status === "false_positive" && finding.review_note && (
+        <p className="mt-3 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground"><span className="font-medium">Why it was dismissed:</span> {finding.review_note}</p>
+      )}
       {canReview && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {finding.status === "pending_confirm" ? (
-            <>
-              <Button size="sm" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "confirmed")}>
-                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Approve
+        <>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {autoBlocked ? null : finding.status === "pending_confirm" ? (
+              <>
+                <Button size="sm" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "confirmed")}>
+                  {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Approve
+                </Button>
+                <Button size="sm" variant="outline" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "open")}>
+                  {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <Undo2 />} Revert
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "pending_confirm")}>
+                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
               </Button>
-              <Button size="sm" variant="outline" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "open")}>
-                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <Undo2 />} Revert
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "pending_confirm")}>
-              {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
+            )}
+            <Button
+              size="sm"
+              variant={finding.status === "false_positive" ? "default" : "outline"}
+              className="rounded-full"
+              disabled={pending === finding.id}
+              onClick={() => {
+                if (finding.status === "false_positive") { void decide(finding, "open"); return; }
+                setNote("");
+                setNoteFor(noteFor === finding.id ? null : finding.id);
+              }}
+            >
+              {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
             </Button>
+          </div>
+          {noteFor === finding.id && finding.status !== "false_positive" && (
+            <div className="mt-3 rounded-lg border border-border p-3">
+              <label htmlFor={`note-${finding.id}`} className="text-xs font-medium">Why is this a false positive?</label>
+              <textarea
+                id={`note-${finding.id}`}
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={3}
+                placeholder="Explain what this pattern actually does and why it is safe in this skill."
+                className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button size="sm" className="rounded-full" disabled={note.trim().length < 15 || pending === finding.id} onClick={() => void decide(finding, "false_positive", note.trim())}>
+                  {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} Dismiss with this reason
+                </Button>
+                <Button size="sm" variant="ghost" className="rounded-full" onClick={() => { setNoteFor(null); setNote(""); }}>Cancel</Button>
+                <span className="text-xs text-muted-foreground">{note.trim().length < 15 ? "At least 15 characters — this is kept on record." : "Kept on record with your name."}</span>
+              </div>
+            </div>
           )}
-          <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
-            {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
-          </Button>
-        </div>
+        </>
       )}
     </div>
   );
@@ -183,7 +223,19 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       </div>
 
       <div ref={bannerRef} />
-      {recommendation && recommendation.action !== "none" && (
+      {autoBlocked && (
+        <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
+          <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
+          <div>
+            <p className="font-medium text-critical">Auto-blocked by policy</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {counts.critical} critical {counts.critical === 1 ? "finding" : "findings"} matched, and your policy blocks any skill with a critical finding. This skill stays blocked — there is nothing to approve.
+              {canReview ? " The only way to change it is to dismiss the critical findings as false positives with a written reason." : ""}
+            </p>
+          </div>
+        </div>
+      )}
+      {recommendation && recommendation.action !== "none" && !autoBlocked && (
         <div className="border-b border-border bg-secondary/60 px-6 py-4">
           <div className="flex items-start gap-3">
             <Bot className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -213,7 +265,7 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
           </div>
         </div>
       )}
-      {state === "quarantined" && (
+      {state === "quarantined" && !autoBlocked && (
         <div className="flex items-start gap-3 border-b border-border bg-critical/10 px-6 py-4">
           <ShieldBan className="mt-0.5 size-5 shrink-0 text-critical" />
           <div>

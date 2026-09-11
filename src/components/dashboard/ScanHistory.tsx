@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeftRight, Bot, LoaderCircle, ShieldAlert, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Bot, LoaderCircle, ShieldAlert, ShieldBan, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteScan } from "@/lib/workspace.functions";
 
@@ -43,12 +43,13 @@ function Delta({ a, b, invert = true }: { a: number; b: number; invert?: boolean
 interface Props {
   scans: HistoryRow[];
   canEdit: boolean;
+  blockOnCritical: boolean;
   selectedId?: string | undefined;
   onOpen: (scan: HistoryRow) => void;
   onChanged: () => void | Promise<void>;
 }
 
-export function ScanHistory({ scans, canEdit, selectedId, onOpen, onChanged }: Props) {
+export function ScanHistory({ scans, canEdit, blockOnCritical, selectedId, onOpen, onChanged }: Props) {
   const remove = useServerFn(deleteScan);
   const [selected, setSelected] = useState<string[]>([]);
   const [comparing, setComparing] = useState(false);
@@ -202,7 +203,11 @@ export function ScanHistory({ scans, canEdit, selectedId, onOpen, onChanged }: P
                       {scan.ai_recommendation === "quarantine" && scan.recommendation_status === "pending" && (
                         <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-medium/10 px-2 py-0.5 font-medium text-medium"><Bot className="size-3" /> Awaiting your approval</span>
                       )}
-                      {scan.containment === "quarantined" && <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>}
+                      {blockOnCritical && counts(scan.severity_counts).critical > 0 ? (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical"><ShieldBan className="size-3" /> Auto-blocked · critical</span>
+                      ) : scan.containment === "quarantined" ? (
+                        <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>
+                      ) : null}
                       {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
                     </span>
                   </button>

@@ -100,6 +100,14 @@ export const saveScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => scanSchema.parse(input))
   .handler(async ({ data, context }) => {
+    const settings = await context.supabase
+      .from("risk_settings")
+      .select("block_on_critical")
+      .eq("organization_id", data.organizationId)
+      .maybeSingle();
+    const criticalCount = (data.counts as Record<string, number>)["critical"] ?? 0;
+    const autoBlocked = (settings.data?.block_on_critical ?? true) && criticalCount > 0;
+
     const inserted = await context.supabase.from("skill_scans").insert({
       organization_id: data.organizationId,
       scanned_by: context.userId,
@@ -113,10 +121,12 @@ export const saveScan = createServerFn({ method: "POST" })
       rules_evaluated: data.rulesEvaluated,
       severity_counts: data.counts as Json,
       scanned_at: data.scannedAt,
+      containment: autoBlocked ? "quarantined" : "none",
+      contained_at: autoBlocked ? new Date().toISOString() : null,
       ai_recommendation: data.recommendation?.action ?? "none",
       ai_recommendation_reason: data.recommendation?.reason ?? "",
       ai_recommendation_confidence: data.recommendation?.confidence ?? 0,
-      recommendation_status: data.recommendation?.action === "quarantine" ? "pending" : "none",
+      recommendation_status: autoBlocked ? "none" : data.recommendation?.action === "quarantine" ? "pending" : "none",
     }).select("id").single();
     if (inserted.error) throw new Error("Could not save the scan.");
     if (data.findings.length) {
@@ -144,7 +154,7 @@ export const getScanFindings = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("scan_findings")
-      .select("id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status")
+      .select("id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status, review_note")
       .eq("scan_id", data.scanId)
       .order("severity", { ascending: true });
     if (result.error) throw new Error("Could not load the findings for this scan.");
@@ -157,11 +167,17 @@ export const reviewFinding = createServerFn({ method: "POST" })
     findingId: z.string().uuid(),
     scanId: z.string().uuid(),
     status: z.enum(["open", "pending_confirm", "confirmed", "false_positive"]),
+    note: z.string().max(2000).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("scan_findings")
-      .update({ status: data.status, reviewed_by: context.userId, reviewed_at: new Date().toISOString() })
+      .update({
+        status: data.status,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+        review_note: data.note?.trim() ?? "",
+      })
       .eq("id", data.findingId);
     if (result.error) throw new Error("Could not save this review decision.");
 
@@ -188,9 +204,10 @@ export const reviewFinding = createServerFn({ method: "POST" })
       blockOnCritical: settings.data.block_on_critical,
     });
 
+    const autoBlocked = settings.data.block_on_critical && counts.critical > 0;
     const confirmedSevere = rows.some((row) => row.status === "confirmed" && (row.severity === "critical" || row.severity === "high"));
     const allDismissed = rows.length > 0 && active.length === 0;
-    const containment = confirmedSevere ? "quarantined" : allDismissed || verdict === "clean" ? "cleared" : "none";
+    const containment = autoBlocked || confirmedSevere ? "quarantined" : allDismissed || verdict === "clean" ? "cleared" : "none";
 
     const updated = await context.supabase
       .from("skill_scans")
@@ -204,7 +221,7 @@ export const reviewFinding = createServerFn({ method: "POST" })
       .eq("id", data.scanId);
     if (updated.error) throw new Error("Decision saved, but the scan record could not be updated.");
 
-    return { score, verdict, containment };
+    return { score, verdict, containment, autoBlocked };
   });
 
 export const decideRecommendation = createServerFn({ method: "POST" })

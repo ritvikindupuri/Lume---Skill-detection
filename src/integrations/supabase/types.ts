@@ -178,6 +178,7 @@ export type Database = {
           line_number: number
           organization_id: string
           remediation: string
+          review_note: string
           reviewed_at: string | null
           reviewed_by: string | null
           rule_id: string
@@ -196,6 +197,7 @@ export type Database = {
           line_number?: number
           organization_id: string
           remediation: string
+          review_note?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           rule_id: string
@@ -214,6 +216,7 @@ export type Database = {
           line_number?: number
           organization_id?: string
           remediation?: string
+          review_note?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           rule_id?: string
