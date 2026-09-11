@@ -300,7 +300,6 @@ export function WorkspaceDashboard() {
   );
 
   const canEdit = workspace.role === "admin" || workspace.role === "analyst";
-  const latest = queue[0];
 
   return (
     <div className="min-h-screen bg-background">
