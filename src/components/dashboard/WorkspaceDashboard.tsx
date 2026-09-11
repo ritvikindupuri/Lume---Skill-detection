@@ -351,6 +351,7 @@ export function WorkspaceDashboard() {
             <ScanHistory
               scans={workspace.scans as unknown as HistoryRow[]}
               canEdit={canEdit}
+              blockOnCritical={policy.blockOnCritical}
               selectedId={selected?.id}
               onOpen={(scan) => setSelected(toSelection(scan))}
               onChanged={async () => { setSelected(null); await refresh(); }}
@@ -435,7 +436,11 @@ export function WorkspaceDashboard() {
                             <span className="block truncate font-medium">{scan.declared_name ?? scan.artifact_name}</span>
                             <span className="mt-1 block text-xs text-muted-foreground">
                               {new Date(scan.scanned_at).toLocaleString()} · {scan.findings_count} findings
-                              {scan.containment === "quarantined" && <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>}
+                              {policy.blockOnCritical && ((scan.severity_counts as Record<string, number> | null)?.["critical"] ?? 0) > 0 ? (
+                                <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Auto-blocked · critical</span>
+                              ) : scan.containment === "quarantined" ? (
+                                <span className="ml-2 rounded-full bg-critical/10 px-2 py-0.5 font-medium text-critical">Quarantined</span>
+                              ) : null}
                               {scan.containment === "cleared" && <span className="ml-2 rounded-full bg-safe/10 px-2 py-0.5 font-medium text-safe">Cleared</span>}
                             </span>
                           </span>
