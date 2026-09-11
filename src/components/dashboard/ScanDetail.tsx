@@ -143,8 +143,11 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
         <span className="text-xs text-muted-foreground">{finding.confidence}% · {confidenceLabel(finding.confidence)} <ConfidenceHint /></span>
       </div>
       <p className="mt-2 font-mono text-xs text-muted-foreground">{finding.file_path}:{finding.line_number}</p>
-      <p className="mt-2 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">{finding.evidence}</p>
-      <p className="mt-2 text-sm text-muted-foreground">{finding.remediation}</p>
+      <div className="mt-2 rounded-md border border-border bg-background px-3 py-2">
+        <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Found in the skill — not advice</p>
+        <p className="mt-1 break-all font-mono text-xs">{finding.evidence}</p>
+      </div>
+      <p className="mt-2 text-sm"><span className="mr-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-primary">What to do</span><span className="text-muted-foreground">{finding.remediation}</span></p>
       {finding.status === "pending_confirm" && (
         <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Hourglass className="size-3.5" /> Waiting for an analyst to approve this as a real risk. The score is unchanged until then.</p>
       )}
