@@ -147,11 +147,11 @@ export function ApprovalQueue({ organizationId, canReview, onChanged }: Props) {
               </div>
               <div className="mt-4 space-y-3 rounded-lg border border-border bg-secondary/60 p-4">
                 <div>
-                  <p className="text-xs font-medium">Matched evidence</p>
+                  <p className="text-xs font-medium">Found in the skill — not advice</p>
                   <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">{finding.evidence}</pre>
                 </div>
                 <div>
-                  <p className="text-xs font-medium">Remediation</p>
+                  <p className="text-xs font-medium">What to do</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{finding.remediation}</p>
                 </div>
                 {finding.aiReason && (
