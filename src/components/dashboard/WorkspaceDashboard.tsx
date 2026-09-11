@@ -272,7 +272,22 @@ export function WorkspaceDashboard() {
           ))}
         </div>
 
-        {tab === "history" ? (
+        {tab === "approvals" ? (
+          <div className="mt-8">
+            <ApprovalQueue organizationId={workspace.organization.id} canReview={canEdit} onChanged={refresh} />
+          </div>
+        ) : tab === "policy" ? (
+          <div className="mt-8">
+            <PolicyBoard
+              policy={policy}
+              onChange={setPolicy}
+              scans={workspace.scans as unknown as PolicyScan[]}
+              canSave={workspace.role === "admin"}
+              saving={savingPolicy}
+              onSave={() => void savePolicy()}
+            />
+          </div>
+        ) : tab === "history" ? (
           <div className="mt-8 space-y-8">
             <ScanHistory
               scans={workspace.scans as unknown as HistoryRow[]}
