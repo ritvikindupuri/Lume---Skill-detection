@@ -20,6 +20,8 @@ import { ArtifactError, readArtifact } from "@/lib/scanner/load";
 import { LAYER_LABEL, RULES, compileCustomCheck, type Layer, type Severity } from "@/lib/scanner/rules";
 import { createWorkspace, getWorkspace, listCustomChecks, saveScan, updateRiskSettings } from "@/lib/workspace.functions";
 import { streamAiScan } from "@/lib/ai-scan-stream";
+import { ApprovalQueue } from "./ApprovalQueue";
+import { PolicyBoard, type PolicyScan } from "./PolicyBoard";
 import { ChecksLibrary, type CustomCheck } from "./ChecksLibrary";
 import { PolicyHint } from "./PolicyHint";
 import { ScanDetail, type ScanRecommendation } from "./ScanDetail";
@@ -82,7 +84,7 @@ export function WorkspaceDashboard() {
   const [scanning, setScanning] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [tab, setTab] = useState<"overview" | "history" | "checks">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "policy" | "history" | "checks">("overview");
   const [selected, setSelected] = useState<{ id: string; name: string; containment: string; recommendation: ScanRecommendation } | null>(null);
   const [thinking, setThinking] = useState<ThinkingState | null>(null);
 
@@ -265,14 +267,29 @@ export function WorkspaceDashboard() {
         {message && <div className="mt-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{message}</div>}
 
         <div className="mt-8 inline-flex rounded-full border border-border bg-card p-1 text-sm">
-          {(["overview", "history", "checks"] as const).map((value) => (
+          {(["overview", "approvals", "policy", "history", "checks"] as const).map((value) => (
             <button key={value} type="button" onClick={() => setTab(value)} className={`rounded-full px-4 py-1.5 capitalize transition-colors ${tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
               {value}
             </button>
           ))}
         </div>
 
-        {tab === "history" ? (
+        {tab === "approvals" ? (
+          <div className="mt-8">
+            <ApprovalQueue organizationId={workspace.organization.id} canReview={canEdit} onChanged={refresh} />
+          </div>
+        ) : tab === "policy" ? (
+          <div className="mt-8">
+            <PolicyBoard
+              policy={policy}
+              onChange={setPolicy}
+              scans={workspace.scans as unknown as PolicyScan[]}
+              canSave={workspace.role === "admin"}
+              saving={savingPolicy}
+              onSave={() => void savePolicy()}
+            />
+          </div>
+        ) : tab === "history" ? (
           <div className="mt-8 space-y-8">
             <ScanHistory
               scans={workspace.scans as unknown as HistoryRow[]}
