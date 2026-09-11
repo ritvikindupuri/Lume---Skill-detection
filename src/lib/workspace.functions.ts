@@ -307,3 +307,56 @@ export const deleteCustomCheck = createServerFn({ method: "POST" })
     if (result.error) throw new Error("Could not delete this check.");
     return { ok: true };
   });
+
+export const suggestCustomChecks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    organizationId: z.string().uuid(),
+    artifacts: z.array(z.object({
+      name: z.string().min(1).max(255),
+      content: z.string().min(1),
+    })).min(1).max(10),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const lovableApiKey = process.env["LOVABLE_API_KEY"];
+    if (!lovableApiKey) throw new Error("AI is not configured for this workspace.");
+
+    const existing = await context.supabase
+      .from("custom_checks")
+      .select("code, title")
+      .eq("organization_id", data.organizationId);
+    if (existing.error) throw new Error("Could not read your existing checks.");
+
+    const { RULES } = await import("@/lib/scanner/rules");
+    const { extractJson } = await import("@/lib/ai-findings");
+    const { SUGGEST_MODEL, SUGGEST_SYSTEM_PROMPT, normalizeSuggestions, suggestUserPrompt } = await import("@/lib/check-suggestions");
+    const { createLumeAi } = await import("@/lib/ai-gateway.server");
+    const { streamText } = await import("ai");
+
+    const budget = Math.floor(300_000 / data.artifacts.length);
+    const artifacts = data.artifacts.map((artifact) => ({ name: artifact.name, content: artifact.content.slice(0, budget) }));
+    const known = [
+      ...RULES.map((rule) => `${rule.id} ${rule.title}`),
+      ...(existing.data ?? []).map((check) => `${check.code} ${check.title}`),
+    ];
+
+    try {
+      const result = streamText({
+        model: createLumeAi(lovableApiKey).responses(SUGGEST_MODEL),
+        maxRetries: 2,
+        providerOptions: {
+          openai: { reasoningEffort: "high", reasoningSummary: "auto", forceReasoning: true, store: false },
+        },
+        system: SUGGEST_SYSTEM_PROMPT,
+        prompt: suggestUserPrompt(known, artifacts),
+      });
+      const text = await result.text;
+      return { model: SUGGEST_MODEL, suggestions: normalizeSuggestions(extractJson(text)) };
+    } catch (error) {
+      const status = typeof error === "object" && error && "statusCode" in error ? Number((error as { statusCode: unknown }).statusCode) : undefined;
+      if (status === 402) throw new Error("AI credits are exhausted. Add credits to continue.");
+      if (status === 403) throw new Error("AI access is blocked by workspace policy.");
+      if (status === 429) throw new Error("The AI service is busy; try again shortly.");
+      throw new Error(error instanceof Error ? error.message : "Could not suggest checks.");
+    }
+  });
