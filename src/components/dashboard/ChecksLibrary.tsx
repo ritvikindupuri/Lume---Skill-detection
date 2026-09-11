@@ -77,6 +77,68 @@ export function ChecksLibrary({ organizationId, canEdit, checks, onChanged }: Pr
     );
   }, [query]);
 
+  const suggest = useServerFn(suggestCustomChecks);
+  const suggestInputRef = useRef<HTMLInputElement>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedCheck[]>([]);
+  const [suggestNote, setSuggestNote] = useState<string | null>(null);
+  const [addingCode, setAddingCode] = useState<string | null>(null);
+
+  const suggestFromFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setSuggesting(true);
+    setSuggestNote(null);
+    setSuggestions([]);
+    try {
+      const artifacts: { name: string; content: string }[] = [];
+      for (const file of Array.from(files)) {
+        const artifact = await readArtifact([file]);
+        const content = artifact.files
+          .filter((item) => item.text !== null)
+          .map((item) => `--- FILE: ${item.path} ---\n${item.text}`)
+          .join("\n\n");
+        if (content.trim()) artifacts.push({ name: artifact.name, content });
+      }
+      if (!artifacts.length) throw new Error("No readable text was found in these files.");
+      const result = await suggest({ data: { organizationId, artifacts } });
+      setSuggestions(result.suggestions);
+      setSuggestNote(
+        result.suggestions.length
+          ? `${result.suggestions.length} suggestion${result.suggestions.length === 1 ? "" : "s"} from ${artifacts.length} skill${artifacts.length === 1 ? "" : "s"}.`
+          : "The AI found nothing worth adding beyond your current checks.",
+      );
+    } catch (cause) {
+      setSuggestNote(cause instanceof Error ? cause.message : "Could not analyze these skills.");
+    } finally {
+      setSuggesting(false);
+      if (suggestInputRef.current) suggestInputRef.current.value = "";
+    }
+  };
+
+  const acceptSuggestion = async (suggestion: SuggestedCheck) => {
+    setAddingCode(suggestion.code);
+    setSuggestNote(null);
+    try {
+      await create({ data: {
+        organizationId,
+        code: suggestion.code,
+        title: suggestion.title,
+        severity: suggestion.severity,
+        layer: suggestion.layer,
+        pattern: suggestion.pattern,
+        rationale: suggestion.rationale,
+        remediation: suggestion.remediation,
+        confidence: suggestion.confidence,
+      } });
+      setSuggestions((current) => current.filter((item) => item.code !== suggestion.code));
+      await onChanged();
+    } catch (cause) {
+      setSuggestNote(cause instanceof Error ? cause.message : "Could not add this check.");
+    } finally {
+      setAddingCode(null);
+    }
+  };
+
   const submit = async () => {
     setBusy(true);
     setError(null);
