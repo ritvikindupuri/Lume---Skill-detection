@@ -230,6 +230,46 @@ export const decideRecommendation = createServerFn({ method: "POST" })
     return { containment, status: data.decision === "approve" ? "approved" : "rejected" };
   });
 
+export const listPendingApprovals = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const [findings, scans] = await Promise.all([
+      context.supabase
+        .from("scan_findings")
+        .select("id, scan_id, rule_id, title, severity, category, file_path, line_number, evidence, remediation, confidence, status, reviewed_at")
+        .eq("organization_id", data.organizationId)
+        .eq("status", "pending_confirm")
+        .order("reviewed_at", { ascending: false })
+        .limit(200),
+      context.supabase
+        .from("skill_scans")
+        .select("id, artifact_name, declared_name, score, verdict, containment, scanned_at, ai_recommendation, ai_recommendation_reason, ai_recommendation_confidence, recommendation_status")
+        .eq("organization_id", data.organizationId)
+        .order("scanned_at", { ascending: false })
+        .limit(200),
+    ]);
+    if (findings.error || scans.error) throw new Error("Could not load the approval queue.");
+    const scanRows = scans.data ?? [];
+    const byId = new Map(scanRows.map((scan) => [scan.id, scan]));
+    return {
+      findings: (findings.data ?? []).map((finding) => {
+        const scan = byId.get(finding.scan_id);
+        return {
+          ...finding,
+          scanName: scan ? scan.declared_name ?? scan.artifact_name : "Unknown skill",
+          scanScore: scan?.score ?? 0,
+          scanVerdict: scan?.verdict ?? "clean",
+          scanContainment: scan?.containment ?? "none",
+          aiReason: scan?.ai_recommendation_reason ?? "",
+          aiAction: scan?.ai_recommendation ?? "none",
+          aiConfidence: scan?.ai_recommendation_confidence ?? 0,
+        };
+      }),
+      containment: scanRows.filter((scan) => scan.recommendation_status === "pending"),
+    };
+  });
+
 export const deleteScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
