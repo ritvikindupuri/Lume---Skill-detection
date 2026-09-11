@@ -1,0 +1,1 @@
+ALTER TABLE public.scan_findings ADD COLUMN IF NOT EXISTS review_note text NOT NULL DEFAULT '';
