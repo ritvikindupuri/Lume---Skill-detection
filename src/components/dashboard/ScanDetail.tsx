@@ -140,11 +140,25 @@ export function ScanDetail({ scanId, name, policy, canReview, containment, recom
       <p className="mt-2 font-mono text-xs text-muted-foreground">{finding.file_path}:{finding.line_number}</p>
       <p className="mt-2 break-all rounded-md bg-background px-3 py-2 font-mono text-xs">{finding.evidence}</p>
       <p className="mt-2 text-sm text-muted-foreground">{finding.remediation}</p>
+      {finding.status === "pending_confirm" && (
+        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><Hourglass className="size-3.5" /> Waiting for an analyst to approve this as a real risk. The score is unchanged until then.</p>
+      )}
       {canReview && (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "confirmed")}>
-            {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
-          </Button>
+          {finding.status === "pending_confirm" ? (
+            <>
+              <Button size="sm" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "confirmed")}>
+                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Approve
+              </Button>
+              <Button size="sm" variant="outline" className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, "open")}>
+                {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <Undo2 />} Revert
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant={finding.status === "confirmed" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "confirmed" ? "open" : "pending_confirm")}>
+              {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <CheckCircle2 />} Real risk
+            </Button>
+          )}
           <Button size="sm" variant={finding.status === "false_positive" ? "default" : "outline"} className="rounded-full" disabled={pending === finding.id} onClick={() => void decide(finding, finding.status === "false_positive" ? "open" : "false_positive")}>
             {pending === finding.id ? <LoaderCircle className="animate-spin" /> : <XCircle />} False positive
           </Button>
