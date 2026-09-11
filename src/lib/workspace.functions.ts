@@ -100,6 +100,14 @@ export const saveScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => scanSchema.parse(input))
   .handler(async ({ data, context }) => {
+    const settings = await context.supabase
+      .from("risk_settings")
+      .select("block_on_critical")
+      .eq("organization_id", data.organizationId)
+      .maybeSingle();
+    const criticalCount = (data.counts as Record<string, number>)["critical"] ?? 0;
+    const autoBlocked = (settings.data?.block_on_critical ?? true) && criticalCount > 0;
+
     const inserted = await context.supabase.from("skill_scans").insert({
       organization_id: data.organizationId,
       scanned_by: context.userId,
@@ -113,10 +121,12 @@ export const saveScan = createServerFn({ method: "POST" })
       rules_evaluated: data.rulesEvaluated,
       severity_counts: data.counts as Json,
       scanned_at: data.scannedAt,
+      containment: autoBlocked ? "quarantined" : "none",
+      contained_at: autoBlocked ? new Date().toISOString() : null,
       ai_recommendation: data.recommendation?.action ?? "none",
       ai_recommendation_reason: data.recommendation?.reason ?? "",
       ai_recommendation_confidence: data.recommendation?.confidence ?? 0,
-      recommendation_status: data.recommendation?.action === "quarantine" ? "pending" : "none",
+      recommendation_status: autoBlocked ? "none" : data.recommendation?.action === "quarantine" ? "pending" : "none",
     }).select("id").single();
     if (inserted.error) throw new Error("Could not save the scan.");
     if (data.findings.length) {
