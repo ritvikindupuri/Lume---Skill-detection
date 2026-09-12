@@ -146,15 +146,50 @@ flowchart TB
     ERRCAP --> AISCANAPI
 ```
 
-### Architecture Flow — Layer by Layer
+### Architecture Flow — Step by Step (Aligned with Architecture Diagram)
 
-**Client Layer** — TanStack Router's file-based routing renders React 19 components. The landing page (`/`) is public and includes a looping product demonstration video (`.webm`/`.mp4`). The dashboard and all its tabs are protected: `WorkspaceDashboard` checks for a Supabase session on mount and redirects unauthenticated users to `/login`.
+1. **Security Analysts / Workspace Users (Box 1):**
+   - **Upload & Interaction:** Analysts and workspace members access Lume to upload Claude skill files (`.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.zip`, `.py`, `.js`, `.ts`, `.sh`) for scanning.
+   - **Triage & Review:** Review detected findings across 8 security layers, inspect full evidence snippets and remediation advice, and view scan comparison audits.
+   - **Containment Oversight:** Approve or reject AI-recommended containment actions and manually quarantine or clear skills.
+   - **Policy & Detection Engineering:** Configure workspace risk thresholds (`acceptableScore`, `maliciousScore`, `blockOnCritical`), create custom regex checks, and test AI-suggested detection rules.
 
-**Client-Side Scan Pipeline** — The entire deterministic engine runs in the browser using `TextDecoder`, `File`/`FileList`, `crypto.subtle` (SHA-256), and the `JSZip` library. No skill content is transmitted to the server during the pattern-matching phase. Only the artifact name, the pre-computed deterministic findings, and a content slice (≤ 500k chars) are sent to the server for AI review.
+2. **Lume Web Application (Box 2):**
+   - **Framework & Routing:** Single-page React 19 application built with TanStack Start, TanStack Router (file-based routing), and Tailwind CSS v4.
+   - **Dashboard Surface:** Hosts the primary workspace dashboard across five dedicated tabs (Overview, History, Approval Queue, Checks Library, Policy Board).
+   - **Scan Orchestration:** Executes the client-side scan pipeline within the browser, streams live AI reasoning chunks into the UI, and communicates with authenticated server functions.
+   - **Triage State Machine:** Provides interactive interfaces (`ScanDetail.tsx`, `ApprovalQueue.tsx`) for marking real risks, recording written false-positive justifications, and triggering instant re-scoring.
 
-**Server Layer** — TanStack Start's `createServerFn` generates type-safe RPCs that execute inside the Nitro server context. Each function uses the `requireSupabaseAuth` middleware, which validates the Bearer JWT against Supabase `getClaims`, then injects `supabase` (a scoped client with the user's auth headers) and `userId` into the function context. All inputs are parsed by Zod schemas before any database call.
+3. **Lume Scan Pipeline (Box 3 — 5-Stage Multi-Engine Inspection):**
+   - **Stage 1 (Artifact Loader — `scanner/load.ts`):** Ingests uploaded files or extracts `.zip` archives up to 20 MB via `JSZip`, performs binary classification and UTF-8 decoding, parses `SKILL.md` YAML frontmatter, and extracts external endpoint URLs. Outputs normalized `ArtifactFile[]`.
+   - **Stage 2 (Deterministic Rules Engine — `scanner/engine.ts`):** Evaluates all non-binary files line-by-line against 35 built-in rules (`RULES`) plus active workspace custom regex checks (`compiledChecks`). Applies noise capping (max 5 findings per rule per file) and executes structural checks (ATT-027). Computes deterministic SHA-256 fingerprint. Outputs initial findings list, category counts, and baseline score.
+   - **Stage 3 (Live AI Review — `ai-scan-stream.ts`):** Sends artifact content (up to 500k chars) and pre-computed deterministic findings to `/api/ai-scan`. Streams real-time model reasoning tokens to `ThinkingLog.tsx` while analyzing multi-step prompt injection, data exfiltration, supply-chain backdoors, and logic evasion. Outputs structured AI findings and containment recommendation.
+   - **Stage 4 (Findings Merge & Risk Scoring — `mergeAiFindings()`):** Deduplicates AI findings against deterministic findings (`file:line:evidence.toLowerCase()`), applies the mathematical severity weighting model with diminishing returns damping (`1 / (1 + 0.55 * n)`), maps the raw score (0–100) across policy thresholds, and assigns the verdict (`clean`, `suspicious`, `malicious`). Outputs final `ScanResult`.
+   - **Stage 5 (Review Decisions, Approvals & Containment):** Analysts triage findings. When findings are dismissed or confirmed, `reviewFinding` dynamically recalculates active severity counts, re-runs `computeScore()`, and updates the scan's containment status (`quarantined`, `cleared`, `none`).
 
-**External Services** — Supabase provides PostgreSQL storage, authentication (email/password + Google OAuth), and Row-Level Security policies. The Lovable AI Gateway (`ai.gateway.lovable.dev/v1`) provides an OpenAI-compatible REST endpoint authenticated by `Lovable-API-Key` header.
+4. **Authenticated Server Functions (Box 4 — `workspace.functions.ts`):**
+   - **Typed RPC Layer:** 14 server functions created using TanStack Start's `createServerFn` executing in the Nitro server context.
+   - **Middleware Security:** Protected by `requireSupabaseAuth` middleware which validates Bearer JWTs, decodes user claims via `getClaims()`, and injects authenticated Supabase clients into the execution context.
+   - **Data Access:** Handles workspace creation/retrieval, scan and finding persistence, finding status updates, containment decisions, custom check CRUD, and AI check generation.
+
+5. **AI Review Route — Server-Side (Box 5 — `api/ai-scan.ts`):**
+   - **Authenticated Streaming Route:** Validates incoming Bearer JWTs and parses payloads with strict Zod schemas.
+   - **AI Analysis Service Integration:** Instantiates the Lovable AI Gateway client (`openai/gpt-6-astra` with `reasoningEffort: "high"`) using `createLumeAi()`.
+   - **Real-Time SSE Streaming:** Streams text deltas as Server-Sent Events (`{ type: "reasoning", text }`) to the client, parses the final JSON block, normalizes findings and containment recommendations, and emits the completion event (`{ type: "done", findings, recommendation }`).
+
+6. **Primary Data Store (Box 6 — Supabase PostgreSQL + Auth):**
+   - **Authentication:** Handles email/password and Google OAuth sessions, issuing cryptographically signed JWTs.
+   - **Relational Schema:** Stores `organizations`, `organization_members` (with enum roles: `admin`, `analyst`, `viewer`), `risk_settings`, `skill_scans`, `scan_findings`, and `custom_checks`.
+   - **Row-Level Security (RLS):** Database-level security policies ensure workspace data is strictly isolated to authenticated organization members.
+
+7. **Outputs & Visibility (Box 7):**
+   - **Overview:** Summary metric cards (total scans, average risk, blocked count), latest batch results, and risk-over-time trend.
+   - **Thinking Log:** Real-time visual progress steps and auto-scrolling model reasoning stream.
+   - **Scan Detail:** Grouped finding triage views (Needs review, Pending approval, Real risks, False positives) with evidence snippets, confidence scores, and remediation instructions.
+   - **History:** Searchable audit log of all analyzed skills with multi-select, bulk deletion, and side-by-side 10-field comparison grid.
+   - **Approval Queue:** Centralized dual-queue managing pending AI containment calls and escalated analyst findings awaiting senior sign-off.
+   - **Policy Board:** Real-time interactive sliders for review and block thresholds with live-impact reclassification simulations.
+   - **Checks Library:** Custom regex check authoring, AI check generation from sample skills, and searchable catalog of all 35 built-in rules.
 
 ---
 
