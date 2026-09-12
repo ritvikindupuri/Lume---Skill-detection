@@ -56,8 +56,8 @@ The platform is built on TanStack Start (React 19, file-based SSR routing), back
 <p align="center"><strong>Figure 1 — Lume System Architecture</strong></p>
 
 ```mermaid
-graph TB
-    subgraph Client["🌐 Client Layer (Browser — React 19 / TanStack Start)"]
+flowchart TB
+    subgraph Client["Client Layer (Browser - React 19 / TanStack Start)"]
         direction TB
         LP["Landing Page /\n(public marketing + video demo)"]
         LOGIN["Login /login\nAuthPanel.tsx\n(email/password + Google OAuth)"]
@@ -66,45 +66,46 @@ graph TB
 
         subgraph Tabs["Dashboard Tabs"]
             OV["Overview\n(metrics, thinking log, batch results, trend chart)"]
-            HIST["History\n(ScanHistory.tsx — full list, multi-select, compare, delete)"]
+            HIST["History\n(ScanHistory.tsx - full list, multi-select, compare, delete)"]
             AQ["Review Queue\n(ApprovalQueue.tsx)"]
             CK["Checks\n(ChecksLibrary.tsx)"]
-            PB["Policy\n(PolicyBoard.tsx — live preview)"]
+            PB["Policy\n(PolicyBoard.tsx - live preview)"]
         end
 
-        SD["ScanDetail.tsx\n(per-finding triage + AI recommendation banner)"]
-        TL["ThinkingLog.tsx\n(live reasoning stream)"]
-        SE["ScoreExplainer.tsx\n(inline score calculation panel)"]
+        SD["Scan Detail (ScanDetail.tsx)"]
+        TL["Thinking Log (ThinkingLog.tsx)"]
+        SE["Score Explainer (ScoreExplainer.tsx)"]
     end
 
-    subgraph ScanPipeline["🔍 Client-Side Scan Pipeline (runs 100% in browser)"]
+    subgraph ScanPipeline["Client-Side Scan Pipeline (runs 100% in browser)"]
         direction TB
-        LOAD["scanner/load.ts\nreadArtifact()\n(ZIP expand, binary detect, UTF-8 decode, 20 MB limit)"]
-        ENGINE["scanner/engine.ts\nscanArtifact()\n(line-by-line rule eval, structural check, SHA-256, scoring)"]
-        RULES["scanner/rules.ts\nRULES[35] + LINE_RULES\n(built-in deterministic checks)"]
-        CUSTCOMP["compileCustomCheck()\n(workspace custom rules compiled to RegExp)"]
-        REPORT["scanner/report.ts\ntoMarkdown() + download()\n(Markdown report export)"]
-        MERGE["engine.ts mergeAiFindings()\n(dedup by file:line:evidence, re-score)"]
+        LOAD["Artifact Loader (scanner/load.ts)\nZIP expand, binary detect, UTF-8 decode, 20 MB limit"]
+        ENGINE["Scan Engine (scanner/engine.ts)\nline-by-line rule eval, structural check, SHA-256, scoring"]
+        RULES["Rules Library (scanner/rules.ts)\n35 built-in deterministic checks"]
+        CUSTCOMP["Custom Rules Compiler (compileCustomCheck)\nworkspace custom rules compiled to RegExp"]
+        REPORT["Markdown Report Generator (scanner/report.ts)\ntoMarkdown + download"]
+        MERGE["Findings Merger (engine.ts mergeAiFindings)\ndedup by file:line:evidence, re-score"]
     end
 
-    subgraph ServerLayer["⚙️ Server Layer (Nitro + TanStack Start Server Functions)"]
+    subgraph ServerLayer["Server Layer (Nitro + TanStack Start Server Functions)"]
         direction TB
-        WFN["workspace.functions.ts\n14 typed server functions\n(Zod-validated, requireSupabaseAuth middleware)"]
-        AISCANAPI["POST /api/ai-scan\n(SSE streaming route — auth + stream proxy)"]
-        STREAM["ai-scan-stream.ts\nstreamAiScan()\n(SSE reader, chunk parser, onReasoning callback)"]
-        AIFIND["ai-findings.ts\nnormalizeFindings() / normalizeRecommendation()\nextractJson() / AI_SYSTEM_PROMPT"]
-        SUGGEST["check-suggestions.ts\nnormalizeSuggestions()\nSUGGEST_SYSTEM_PROMPT"]
-        GATEWAY["ai-gateway.server.ts\ncreateLumeAi()\n(Lovable AI Gateway — OpenAI-compatible)"]
-        ERRCAP["error-capture.ts\nconsole.error intercept\nh3 swallowed-error recovery"]
+        WFN["Workspace Functions (workspace.functions.ts)\n14 typed server functions (Zod-validated)"]
+        AISCANAPI["API Route (POST /api/ai-scan)\nSSE streaming route - auth + stream proxy"]
+        STREAM["Stream Consumer (ai-scan-stream.ts)\nSSE reader, chunk parser, onReasoning callback"]
+        AIFIND["Findings Normalizer (ai-findings.ts)\nnormalizeFindings / normalizeRecommendation"]
+        SUGGEST["Check Suggester (check-suggestions.ts)\nnormalizeSuggestions / SUGGEST_SYSTEM_PROMPT"]
+        GATEWAY["AI Gateway Factory (ai-gateway.server.ts)\ncreateLumeAi - Lovable AI Gateway"]
+        ERRCAP["Error Capture (error-capture.ts)\nconsole.error intercept + h3 recovery"]
     end
 
-    subgraph Auth["🔐 Auth Middleware"]
-        AUTHMW["requireSupabaseAuth\n(Bearer JWT → getClaims → userId + claims injected)"]
+    subgraph Auth["Auth Middleware"]
+        AUTHMW["requireSupabaseAuth\nBearer JWT validation -> getClaims -> injects userId + claims"]
     end
 
-    subgraph ExternalServices["☁️ External Services"]
-        SB[("Supabase\nPostgreSQL\n+ Auth (email/password + Google OAuth)\n+ Row-Level Security\n+ RPC: create_organization_with_admin")]
-        GPT["openai/gpt-6-astra\nvia Lovable AI Gateway\nhttps://ai.gateway.lovable.dev/v1\nreasoningEffort: high"]
+    subgraph ExternalServices["External Services"]
+        direction TB
+        SB[("Supabase (PostgreSQL + Auth)\nRow-Level Security + RPC create_organization_with_admin")]
+        GPT["AI Gateway (openai/gpt-6-astra)\nhttps://ai.gateway.lovable.dev/v1\nreasoningEffort: high"]
     end
 
     LP --> LOGIN
@@ -161,18 +162,18 @@ Lume embeds two distinct AI agents, each with a dedicated role, system prompt, m
 <p align="center"><strong>Figure 2 — Lume Agent Architecture</strong></p>
 
 ```mermaid
-graph TB
-    subgraph ScanAgent["🤖 Agent 1 — Security Review Agent (ai-scan)"]
+flowchart TB
+    subgraph ScanAgent["Agent 1 - Security Review Agent (ai-scan)"]
         direction TB
         SA_TRIGGER["Trigger: User uploads skill file(s)\nand deterministic scan completes"]
-        SA_INPUT["Input to Server:\n- artifactName: string\n- content: string (≤ 500k chars)\n- deterministicFindings: array (≤ 200)"]
-        SA_AUTH["Authorization:\nBearer JWT → getClaims() → valid sub"]
+        SA_INPUT["Input to Server:\n- artifactName: string\n- content: string (<= 500k chars)\n- deterministicFindings: array (<= 200)"]
+        SA_AUTH["Authorization:\nBearer JWT -> getClaims() -> valid sub"]
         SA_MODEL["Model: openai/gpt-6-astra\nreasoningEffort: high\nreasoningSummary: detailed\nforceReasoning: true\nstore: false\nmaxRetries: 2"]
-        SA_PROMPT["System: AI_SYSTEM_PROMPT\n(Senior skill security analyst)\nInstruction: 2-section output format:\n1. Reading log (plain text, streamed live)\n2. JSON findings + recommendation"]
-        SA_SSE["SSE Stream Events:\n{type:reasoning, text} → ThinkingLog\n{type:done, findings, recommendation}\n{type:error, message}"]
-        SA_NORM["normalizeFindings():\n- validate severity/layer allowlists\n- clamp confidence 10–95%\n- auto-ID: GPT-001, GPT-002…\n- truncate evidence to 220 chars\n- source: 'ai'"]
-        SA_REC["normalizeRecommendation():\n- action: quarantine | allow\n- reason: string (≤600 chars)\n- confidence: 0–100"]
-        SA_OUT["Output: { model, findings: Finding[], recommendation: AiRecommendation | null }"]
+        SA_PROMPT["System: AI_SYSTEM_PROMPT\nSenior skill security analyst\nInstruction: 2-section output format:\n1. Reading log (plain text, streamed live)\n2. JSON findings + recommendation"]
+        SA_SSE["SSE Stream Events:\ntype: reasoning, text -> ThinkingLog\ntype: done, findings, recommendation\ntype: error, message"]
+        SA_NORM["normalizeFindings():\n- validate severity/layer allowlists\n- clamp confidence 10-95%\n- auto-ID: GPT-001, GPT-002...\n- truncate evidence to 220 chars\n- source: 'ai'"]
+        SA_REC["normalizeRecommendation():\n- action: quarantine | allow\n- reason: string (<= 600 chars)\n- confidence: 0-100"]
+        SA_OUT["Output: model, findings: Finding[], recommendation: AiRecommendation | null"]
 
         SA_TRIGGER --> SA_INPUT
         SA_INPUT --> SA_AUTH
@@ -185,15 +186,15 @@ graph TB
         SA_REC --> SA_OUT
     end
 
-    subgraph SuggestAgent["🤖 Agent 2 — Detection Engineer Agent (suggestCustomChecks)"]
+    subgraph SuggestAgent["Agent 2 - Detection Engineer Agent (suggestCustomChecks)"]
         direction TB
         SG_TRIGGER["Trigger: User uploads skills to Checks tab"]
-        SG_INPUT["Input to Server:\n- organizationId: UUID\n- artifacts: array (name + content, ≤10)\nBudget: 300k chars ÷ artifact count"]
+        SG_INPUT["Input to Server:\n- organizationId: UUID\n- artifacts: array (name + content, <= 10)\nBudget: 300k chars / artifact count"]
         SG_KNOWN["Context injected:\n- All 35 built-in rule codes/titles\n- All existing custom check codes/titles"]
         SG_MODEL["Model: openai/gpt-6-astra\nreasoningEffort: high\nreasoningSummary: auto\nforceReasoning: true\nstore: false\nmaxRetries: 2"]
-        SG_PROMPT["System: SUGGEST_SYSTEM_PROMPT\n(Detection engineer role)\nConstraints:\n- Ground every check in exact evidence\n- No restatement of existing checks\n- Regex: JS-valid, ≤300 chars, no lookbehind\n- Max 6 proposals"]
-        SG_NORM["normalizeSuggestions():\n- Validate regex compiles\n- Clamp confidence 10–95%\n- Auto-code: AI-001…AI-006 if malformed\n- Validate severity + layer enums\n- Slice rationale/remediation/evidence"]
-        SG_OUT["Output: SuggestedCheck[] (≤6)\n{ code, title, severity, layer,\n  pattern, rationale, remediation,\n  confidence, evidence }"]
+        SG_PROMPT["System: SUGGEST_SYSTEM_PROMPT\nDetection engineer role\nConstraints:\n- Ground every check in exact evidence\n- No restatement of existing checks\n- Regex: JS-valid, <= 300 chars, no lookbehind\n- Max 6 proposals"]
+        SG_NORM["normalizeSuggestions():\n- Validate regex compiles\n- Clamp confidence 10-95%\n- Auto-code: AI-001...AI-006 if malformed\n- Validate severity + layer enums\n- Slice rationale/remediation/evidence"]
+        SG_OUT["Output: SuggestedCheck[] (<= 6)\ncode, title, severity, layer,\npattern, rationale, remediation,\nconfidence, evidence"]
 
         SG_TRIGGER --> SG_INPUT
         SG_INPUT --> SG_KNOWN
@@ -203,7 +204,7 @@ graph TB
         SG_NORM --> SG_OUT
     end
 
-    subgraph HIL["👤 Human-in-the-Loop (always required before enforcement)"]
+    subgraph HIL["Human-in-the-Loop Protocol (required before enforcement)"]
         HIL_A["Analyst reviews each\nScan Finding:\nReal risk / False positive\n/ Pending approval / Revert"]
         HIL_B["Analyst reviews\nAI Recommendation:\nApprove quarantine / Reject"]
         HIL_C["Analyst reviews\nSuggested Check:\nAdd to library / Dismiss"]

@@ -1,4 +1,4 @@
-# 🔦 Lume — See the risk before it runs.
+# Lume — See the risk before it runs.
 
 > **Deep security inspection for Claude skills. Know what an AI skill will do before you trust it.**
 
@@ -6,7 +6,7 @@ Lume is a full-stack security platform that scans Claude (Anthropic) skill artif
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 | Feature | Description |
 |---|---|
@@ -19,49 +19,53 @@ Lume is a full-stack security platform that scans Claude (Anthropic) skill artif
 | **Scan History & Comparison** | Full audit trail with timestamps, verdict history, risk trend chart, and side-by-side comparison of any two scans |
 | **Containment Actions** | Skills can be quarantined (blocked) or cleared; every decision is timestamped and attributed |
 | **Workspace & RBAC** | Per-organization workspaces with admin and analyst roles; viewers can observe but cannot modify |
-| **ZIP & Multi-File Support** | Upload individual files, multi-file selections, or `.zip` archives up to 20 MB |
+| **ZIP & Multi-File Support** | Upload individual files, multi-file selections, or .zip archives up to 20 MB |
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 <p align="center"><strong>Figure 1 — Lume System Architecture</strong></p>
 
 ```mermaid
-graph TB
-    subgraph Browser["🌐 Browser (React 19 / TanStack Start)"]
-        LP[Landing Page<br/>index.tsx]
-        AUTH[Auth Panel<br/>AuthPanel.tsx]
-        DASH[Workspace Dashboard<br/>WorkspaceDashboard.tsx]
+flowchart TB
+    subgraph Browser["Client Layer (React 19 / TanStack Start)"]
+        direction TB
+        LP["Landing Page (index.tsx)"]
+        AUTH["Auth Panel (AuthPanel.tsx)"]
+        DASH["Workspace Dashboard (WorkspaceDashboard.tsx)"]
 
-        subgraph Tabs["Dashboard Tabs"]
-            OV[Scan / Overview]
-            HIST[History]
-            AQ[Approval Queue]
-            CK[Checks Library]
-            PB[Policy Board]
+        subgraph Tabs["Dashboard Views"]
+            OV["Scan / Overview"]
+            HIST["History"]
+            AQ["Approval Queue"]
+            CK["Checks Library"]
+            PB["Policy Board"]
         end
 
-        SD[Scan Detail<br/>ScanDetail.tsx]
-        TL[Thinking Log<br/>ThinkingLog.tsx]
+        SD["Scan Detail (ScanDetail.tsx)"]
+        TL["Thinking Log (ThinkingLog.tsx)"]
     end
 
-    subgraph Server["⚙️ Server (TanStack Start / Nitro)"]
-        SF[Server Functions<br/>workspace.functions.ts]
-        AISCAN[API Route<br/>api/ai-scan.ts]
-        STREAM[AI Stream Handler<br/>ai-scan-stream.ts]
+    subgraph ScanEngine["Client-Side Scan Engine"]
+        direction TB
+        LOAD["Artifact Loader (scanner/load.ts)"]
+        ENGINE["Scan Engine (scanner/engine.ts)"]
+        RULES["Rules Library (35 Deterministic Rules)"]
+        AIFIND["AI Findings Normalizer (ai-findings.ts)"]
     end
 
-    subgraph ScanEngine["🔍 Scan Engine (Client-side)"]
-        LOAD[Artifact Loader<br/>scanner/load.ts]
-        ENGINE[Scan Engine<br/>scanner/engine.ts]
-        RULES[Rules Library<br/>scanner/rules.ts<br/>35 deterministic checks]
-        AIFIND[AI Findings Normalizer<br/>ai-findings.ts]
+    subgraph Server["Server Layer (TanStack Start / Nitro)"]
+        direction TB
+        SF["Server Functions (workspace.functions.ts)"]
+        AISCAN["API Route (POST /api/ai-scan)"]
+        STREAM["Stream Consumer (ai-scan-stream.ts)"]
     end
 
-    subgraph External["☁️ External Services"]
-        SB[(Supabase<br/>PostgreSQL + Auth)]
-        GPT[GPT Model<br/>openai/gpt-6-astra<br/>via Lovable AI Gateway]
+    subgraph External["External Services"]
+        direction TB
+        SB[("Supabase (PostgreSQL + Auth)")]
+        GPT["AI Gateway (openai/gpt-6-astra)"]
     end
 
     LP --> AUTH
@@ -83,14 +87,13 @@ graph TB
     CK --> SF
     PB --> SF
     SF --> SB
-    SB --> SF
 ```
 
 ### Architecture Flow — Step by Step
 
 1. **Landing Page (`/`)** — A public marketing page presents Lume's value proposition with a product demo video. Navigation links lead to login or the dashboard.
 
-2. **Authentication (`/login`, `/auth/callback`)** — Supabase Auth handles email-based magic-link or OAuth sign-in. A server-side callback route exchanges the token and establishes a session.
+2. **Authentication (`/login`, `/auth/callback`)** — Supabase Auth handles email/password or OAuth sign-in. A server-side callback route exchanges the token and establishes a session.
 
 3. **Workspace Bootstrap** — On first login, users are prompted to name a workspace. The `createWorkspace` server function calls a Supabase RPC (`create_organization_with_admin`) to provision an organization and assign the user the admin role.
 
@@ -110,7 +113,7 @@ graph TB
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -133,11 +136,11 @@ graph TB
 
 ---
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.3 (`npm install -g bun` or `curl -fsSL https://bun.sh/install | bash`)
+- [Bun](https://bun.sh) >= 1.3 (`npm install -g bun` or `curl -fsSL https://bun.sh/install | bash`)
 - A [Supabase](https://supabase.com) project (free tier works)
 - A [Lovable](https://lovable.dev) account with an API key (for AI features)
 - Node.js 18+ (for tooling compatibility; Bun is the primary runtime)
@@ -169,7 +172,7 @@ cp .env .env.local
 Open `.env.local` and set:
 
 ```env
-# Supabase — found in your Supabase project → Settings → API
+# Supabase — found in your Supabase project -> Settings -> API
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
@@ -230,23 +233,23 @@ npx drizzle-kit studio
 
 ---
 
-## 📖 How to Use the App
+## How to Use the App
 
 ### Step 1 — Sign In
 
 1. Navigate to the app root (`/`).
 2. Click **Sign in** (top-right) or **Dashboard** — both redirect unauthenticated users to `/login`.
-3. On the Login page, enter your email and click **Send magic link** (or sign in with your configured OAuth provider).
-4. Check your email, click the magic link, and you'll be redirected to `/auth/callback` then on to the dashboard.
+3. On the Login page, enter your email and password (or click **Continue with Google**).
+4. After authenticating, you will be redirected to `/dashboard`.
 
 ---
 
 ### Step 2 — Create Your Workspace
 
-On first sign-in, you'll see the **"Name your workspace"** screen.
+On first sign-in, you will see the **"Name your workspace"** screen.
 
 1. Type a workspace name (minimum 2 characters, e.g., `My Security Team`).
-2. Press **Enter** or click **Create workspace →**.
+2. Press **Enter** or click **Create workspace ->**.
 3. Lume provisions the organization and assigns you the **admin** role.
 
 ---
@@ -264,9 +267,9 @@ On first sign-in, you'll see the **"Name your workspace"** screen.
    - Step 3: "GPT reviewing intent, combinations and evasion" — live AI streaming begins
    - The **Model reasoning** pane streams the GPT reviewer's reading log in real time
 4. When complete, the **Latest batch** grid displays each scanned skill's name, finding count, analysis duration, and **risk score** (0–100) colored by verdict:
-   - 🟢 **clean** — below the review threshold
-   - 🟡 **suspicious** — in the review band, needs human inspection
-   - 🔴 **malicious** — at or above the block threshold, or has a critical finding
+   - **clean** — below the review threshold
+   - **suspicious** — in the review band, needs human inspection
+   - **malicious** — at or above the block threshold, or has a critical finding
 
 ---
 
@@ -275,7 +278,7 @@ On first sign-in, you'll see the **"Name your workspace"** screen.
 1. Click the **History** tab.
 2. Every scan is listed with: name, date/time, finding count, verdict, score, and containment badge.
 3. Click any row to open the **Scan Detail** panel below the list.
-4. In Scan Detail you'll see:
+4. In Scan Detail you will see:
    - **Findings grouped** by status: Needs review / Pending analyst approval / Real risks / False positives
    - Each finding shows: rule ID, title, severity, confidence %, file:line, exact evidence excerpt, and remediation advice
    - The **AI recommendation banner** shows the GPT containment call (quarantine / allow) and its confidence
@@ -286,8 +289,8 @@ On first sign-in, you'll see the **"Name your workspace"** screen.
 
 For each finding in Scan Detail:
 
-- Click **Real risk** to flag it as a confirmed threat → the score increases; if severe enough, the skill is quarantined
-- Click **False positive** → a text field opens asking for a reason (minimum 15 characters, kept on record). Click **Dismiss with this reason** → the finding is removed from the active score
+- Click **Real risk** to flag it as a confirmed threat -> the score increases; if severe enough, the skill is quarantined
+- Click **False positive** -> a text field opens asking for a reason (minimum 15 characters, kept on record). Click **Dismiss with this reason** -> the finding is removed from the active score
 - Analysts may click **Real risk** to escalate to **pending_confirm** status, which sends it to the Approval Queue for an admin to sign off
 
 ---
@@ -311,7 +314,7 @@ For each finding in Scan Detail:
    - Click **Upload skills** and select skill files
    - The AI reads them against your existing check library and proposes up to 6 new pattern-based rules
    - Review each suggestion (code, title, severity, category, regex pattern, evidence, and rationale)
-   - Click **+ Add check** to save a suggestion, or the **×** icon to dismiss it
+   - Click **+ Add check** to save a suggestion, or the **x** icon to dismiss it
 
    **Your Checks:**
    - Click **+ New check** to manually author a rule
@@ -343,8 +346,8 @@ On the **Overview** tab, the **Risk trend** chart plots your last 20 scans chron
 
 ---
 
-## 📄 Technical Documentation
+## Technical Documentation
 
 For a deep-dive into every core feature, the scoring model, AI architecture, database schema, and API contracts, see:
 
-👉 **[TECHNICAL_DOCS.md](./TECHNICAL_DOCS.md)**
+[TECHNICAL_DOCS.md](./TECHNICAL_DOCS.md)
