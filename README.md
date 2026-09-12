@@ -25,9 +25,8 @@ Lume is a full-stack security platform that scans Claude (Anthropic) skill artif
 
 ## System Architecture
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/ritvikindupuri/Lume---Skill-detection/main/assets/lume-architecture.jpg" alt="LUME — Skill Detection Architecture" width="100%" />
-</p>
+![LUME — Skill Detection Architecture](assets/lume-architecture.jpg)
+
 <p align="center"><strong>Figure 1 — Lume System Architecture</strong></p>
 
 ### Architecture Flow — Step by Step
