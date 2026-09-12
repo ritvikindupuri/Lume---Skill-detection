@@ -53,7 +53,7 @@ The platform is built on TanStack Start (React 19, file-based SSR routing), back
 
 ## 2. System Architecture
 
-![LUME — Skill Detection Architecture](assets/lume-architecture.jpg)
+![LUME — Skill Detection Architecture](./assets/lume-skill-detection-architecture.png)
 
 <p align="center"><strong>Figure 1 — Lume System Architecture</strong></p>
 
