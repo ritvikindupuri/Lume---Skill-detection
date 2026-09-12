@@ -1,8 +1,8 @@
-# Lume — See the risk before it runs.
+# Lume: See the risk before it runs.
 
 > **Deep security inspection for Claude skills. Know what an AI skill will do before you trust it.**
 
-Lume is a full-stack security platform that scans Claude (Anthropic) skill artifacts for hidden intent, unsafe behavior, data leakage, and supply-chain compromise — before they ever run in your environment. It combines 35 deterministic rule-based checks with a live GPT-powered AI reviewer that reasons through each skill's content in real time, delivering a scored verdict (clean / suspicious / malicious) alongside per-finding remediation guidance and a human-in-the-loop approval workflow.
+Lume is a full-stack security platform that scans Claude skill artifacts for hidden intent, unsafe behavior, data leakage, and supply-chain compromise before they run in your environment. It combines 35 deterministic rule-based checks with a live GPT-powered AI reviewer that reasons through each skill's content in real time, delivering a scored verdict of clean, suspicious, or malicious alongside per-finding remediation guidance and a human-in-the-loop approval workflow.
 
 ---
 
