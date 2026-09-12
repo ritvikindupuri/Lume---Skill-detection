@@ -200,6 +200,16 @@ On first sign-in, you will see the **"Name your workspace"** screen.
    - Supported formats: `.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.zip`, `.py`, `.js`, `.ts`, `.sh`
    - Maximum total size: **20 MB**
    - ZIP archives are extracted automatically
+
+> **Ready-to-Use Test Skills:** The repository includes sample `SKILL.md` files in the [`samples/`](./samples) directory for testing every threat level:
+> - [Clean Git Assistant (`samples/clean-git-assistant/SKILL.md`)](./samples/clean-git-assistant/SKILL.md) — Safe instructions and complete metadata (Expected verdict: **clean**, score: 0/100).
+> - [Suspicious Log Parser (`samples/suspicious-log-parser/SKILL.md`)](./samples/suspicious-log-parser/SKILL.md) — External telemetry and unpinned packages (Expected verdict: **suspicious**, score: 25–40/100).
+> - [Malicious Prompt Override (`samples/malicious-prompt-override/SKILL.md`)](./samples/malicious-prompt-override/SKILL.md) — Hidden HTML comment directives and instruction override (Expected verdict: **malicious**, score: 80+/100).
+> - [Critical Credential Harvester (`samples/critical-credential-harvester/SKILL.md`)](./samples/critical-credential-harvester/SKILL.md) — Key theft, covert DNS beacons, and `eval()` execution (Expected verdict: **malicious / auto-blocked & quarantined**, score: 90+/100).
+> - [Supply Chain Obfuscation (`samples/supply-chain-obfuscated/SKILL.md`)](./samples/supply-chain-obfuscated/SKILL.md) — Base64 payload decoding and dormant time-bombs (Expected verdict: **malicious**, score: 85+/100).
+> 
+> See the [Sample Skills Catalog (`samples/README.md`)](./samples/README.md) for full testing instructions.
+
 3. Watch the **Live analysis** panel appear below the summary cards:
    - Step 1: "Reading the skill files" — artifact loading
    - Step 2: "Running N deterministic checks" — all 35+ rules execute client-side
