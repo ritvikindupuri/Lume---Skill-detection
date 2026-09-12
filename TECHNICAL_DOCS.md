@@ -363,28 +363,42 @@ Binary files are counted in `files_count` and their sizes contribute to `totalBy
 
 The engine is a pure async function that accepts `artifactName`, `files: ArtifactFile[]`, `riskConfig`, and `customRules: CompiledCustomRule[]`. It returns a fully typed `ScanResult`.
 
-**Execution steps:**
+**Scan Orchestration (`scanFiles` in `WorkspaceDashboard`):**
 
-1. **Skill file identification:** Finds the primary skill file by preference: first file matching `/(^|\/)SKILL\.md$/i`, then any `.md` file. Parses its YAML frontmatter for metadata (name, description, author, license, tools/allowed-tools).
+The scan button triggers a hidden `<input type="file" multiple accept=".md,.txt,.json,.yaml,.yml,.zip,.py,.js,.ts,.sh">`. For each `File` in the `FileList`, the pipeline executes sequentially:
 
-2. **Host extraction:** Uses `extractHosts()` to regex-scan every text file for `https?://hostname` references, counting occurrences per host. The result (`endpoints`) lets reviewers see all external endpoints a skill touches.
+1. **Step label set:** `"Reading the skill files"` (spinner)
+2. **`readArtifact([file])`** — loads and decodes the single file (or extracts ZIP)
+3. **Step updated:** `"Read N file(s): path1, path2"` (done) + `"Running N deterministic checks"` (spinner), where N = `RULES.length + compiledChecks.length` (i.e., 35 + enabled custom checks)
+4. **`scanArtifact()`** — deterministic engine evaluates all files against rules
+5. **Step updated:** `"Deterministic checks complete · M finding(s)"` (done) + `"GPT reviewing intent, combinations and evasion"` (spinner)
+6. **Content slice:** All text files joined as `"--- FILE: path ---\ncontent"` and sliced to 500,000 chars for the AI call
+7. **`streamAiScan()`** — AI streams; each reasoning chunk appends to `thinking.reasoning` state, rendered live in `ThinkingLog`
+8. **Step updated:** `"GPT review complete · K additional finding(s)"` (done)
+9. **`mergeAiFindings()`** — combines deterministic + novel AI findings, re-scores
+10. **`saveScan()`** — persists result and findings to Supabase
+11. Loop repeats for the next file
 
+After all files complete: `setQueue(completed)` populates the **Latest batch** grid on the Overview tab. `refresh()` reloads the workspace metrics and history. A toast/message displays `"N skills analyzed and saved."`
+
+The `"Scan multiple skills"` button displays a `LoaderCircle` spinner and the label `"Analyzing…"` while scanning. The file input `value` is reset to `""` after every batch so the same file can be re-selected immediately.
+
+**Internal Execution Steps of `scanArtifact()`:**
+
+1. **Skill file identification:** Finds the primary skill file by preference: first file matching `/(^|\/)SKILL\.md$/i`, then any `.md` file. Parses its YAML frontmatter via `parseFrontmatter()` for metadata (`name`, `description`, `author`, `license`, `tools` / `allowed-tools`).
+2. **Host extraction:** Uses `extractHosts()` to regex-scan every text file for `https?://hostname` references, aggregating unique hosts and counting occurrences into the `endpoints` list.
 3. **Line-by-line rule matching:** Iterates every line of every text file. For each non-empty line:
    - Skips if the rule has a `pathPattern` that doesn't match the current file path
-   - Skips if this rule has already produced `MAX_FINDINGS_PER_RULE_FILE` (5) findings in this file
-   - Tests the line against the rule's `pattern` (RegExp, `i` flag)
-   - On match: creates a finding with file path, 1-indexed line number, clipped evidence (220 chars), the appropriate source (`"rule"` or `"custom"`), and the rule's confidence
+   - Skips if this rule has already reached `MAX_FINDINGS_PER_RULE_FILE` (5) findings in this file (noise prevention)
+   - Tests the line against the rule's `pattern` (RegExp with `i` flag)
+   - On match: records a finding with file path, 1-indexed line number, clipped evidence (≤ 220 chars via `clip()`), source (`"rule"` or `"custom"`), and confidence percentage
    - Active rules = `LINE_RULES` (all 34 line-based rules) + `customRules`
-
-4. **Structural check (ATT-027):** After line scanning, checks whether the identified skill file has both `author` and `license` declared in frontmatter. If either is missing, a finding is added (source: `"rule"`, confidence: 92%).
-
-5. **SHA-256 computation:** `crypto.subtle.digest("SHA-256", encoder.encode(allContentJoinedByNulls))` — deterministic fingerprint of the full artifact.
-
+4. **Structural check (ATT-027):** After line scanning, checks whether the identified skill file has both `author` and `license` declared in frontmatter. If **both are absent** (neither `author` nor `license` present), a finding is added with evidence `"no author or license declared"` (source: `"rule"`, confidence: 92%). The check is skipped entirely if no skill file was identified in the artifact.
+5. **SHA-256 computation:** Encodes each file as `"path:text"` (or `"path:<binary:N>"` for binary files), joins all parts with a null character `\u0000`, encodes as UTF-8, and calls `crypto.subtle.digest("SHA-256", ...)`. The hex digest is returned from the exported `sha256Hex()` helper.
 6. **Scoring:** Calls `computeScore(counts, riskConfig)` with the per-severity counts from all findings.
-
 7. **Result assembly:** Returns the complete `ScanResult` with timing (`durationMs`), file list (path, size, binary flag, finding count), total bytes, rules evaluated count, sorted findings, score breakdown, endpoints, and extracted metadata.
 
-**Finding deduplication:** The per-file-per-rule cap (5 findings) prevents a single noisy pattern from flooding the results. Findings are sorted: severity first (critical → high → medium → low), then file path alphabetically, then line number ascending.
+**Finding deduplication in `mergeAiFindings`:** Builds a `Set` of existing finding keys as `"file:line:evidence.toLowerCase()"`. AI findings whose key already exists in this set are discarded as duplicates; novel findings are merged in. The combined list is re-sorted and re-scored.
 
 ---
 
