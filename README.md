@@ -25,91 +25,31 @@ Lume is a full-stack security platform that scans Claude (Anthropic) skill artif
 
 ## System Architecture
 
+<p align="center">
+  <img src="./assets/lume-architecture.jpg" alt="LUME — Skill Detection Architecture" width="100%" />
+</p>
 <p align="center"><strong>Figure 1 — Lume System Architecture</strong></p>
-
-```mermaid
-flowchart TB
-    subgraph Browser["Client Layer (React 19 / TanStack Start)"]
-        direction TB
-        LP["Landing Page (index.tsx)"]
-        AUTH["Auth Panel (AuthPanel.tsx)"]
-        DASH["Workspace Dashboard (WorkspaceDashboard.tsx)"]
-
-        subgraph Tabs["Dashboard Views"]
-            OV["Scan / Overview"]
-            HIST["History"]
-            AQ["Approval Queue"]
-            CK["Checks Library"]
-            PB["Policy Board"]
-        end
-
-        SD["Scan Detail (ScanDetail.tsx)"]
-        TL["Thinking Log (ThinkingLog.tsx)"]
-    end
-
-    subgraph ScanEngine["Client-Side Scan Engine"]
-        direction TB
-        LOAD["Artifact Loader (scanner/load.ts)"]
-        ENGINE["Scan Engine (scanner/engine.ts)"]
-        RULES["Rules Library (35 Deterministic Rules)"]
-        AIFIND["AI Findings Normalizer (ai-findings.ts)"]
-    end
-
-    subgraph Server["Server Layer (TanStack Start / Nitro)"]
-        direction TB
-        SF["Server Functions (workspace.functions.ts)"]
-        AISCAN["API Route (POST /api/ai-scan)"]
-        STREAM["Stream Consumer (ai-scan-stream.ts)"]
-    end
-
-    subgraph External["External Services"]
-        direction TB
-        SB[("Supabase (PostgreSQL + Auth)")]
-        GPT["AI Gateway (openai/gpt-6-astra)"]
-    end
-
-    LP --> AUTH
-    AUTH --> SB
-    AUTH --> DASH
-    DASH --> Tabs
-    OV --> LOAD
-    LOAD --> ENGINE
-    ENGINE --> RULES
-    ENGINE --> AISCAN
-    AISCAN --> STREAM
-    STREAM --> GPT
-    GPT --> AIFIND
-    AIFIND --> ENGINE
-    ENGINE --> SF
-    SF --> SB
-    HIST --> SD
-    AQ --> SF
-    CK --> SF
-    PB --> SF
-    SF --> SB
-```
 
 ### Architecture Flow — Step by Step
 
-1. **Landing Page (`/`)** — A public marketing page presents Lume's value proposition with a product demo video. Navigation links lead to login or the dashboard.
+1. **Security Analysts / Workspace Users (Box 1)** — Users access the platform, upload single/multi-file skills or ZIP archives for analysis, review historical results, manage risk policy thresholds, author custom detection checks, and approve/reject containment actions.
 
-2. **Authentication (`/login`, `/auth/callback`)** — Supabase Auth handles email/password or OAuth sign-in. A server-side callback route exchanges the token and establishes a session.
+2. **Lume Web Application (Box 2)** — Built on React 19 and TanStack Start, the web application renders the interactive workspace dashboard, hosts the checks library, policy board, and approval queue, orchestrates the browser-side scan workflow, and manages user review decisions.
 
-3. **Workspace Bootstrap** — On first login, users are prompted to name a workspace. The `createWorkspace` server function calls a Supabase RPC (`create_organization_with_admin`) to provision an organization and assign the user the admin role.
+3. **Lume Scan Pipeline (Box 3)** — A multi-stage client-side deterministic and authenticated server-side AI review pipeline:
+   - **Stage 1 (Artifact Loader):** Reads `.md`, `.txt`, `.json`, `.yaml`, `.yml`, `.zip`, `.py`, `.js`, `.ts`, `.sh` files, checks 20 MB size limits, filters binary files, and extracts archive entries.
+   - **Stage 2 (Deterministic Rules Engine):** Evaluates 35 built-in security rules and active custom regex checks across prompt integrity, agency, data leakage, privacy, supply-chain, integrity, bias, and resilience layers. Outputs initial findings and baseline score.
+   - **Stage 3 (Live AI Review):** Sends artifact content (up to 500k chars) and deterministic findings to `/api/ai-scan`, streaming model reasoning in real time and surfacing semantic threats that pattern matching misses. Outputs AI findings and containment recommendation.
+   - **Stage 4 (Findings Merge & Risk Scoring):** Normalizes and deduplicates findings, applies severity weights with diminishing returns, maps inherent score across workspace thresholds (0–100), and assigns final verdict (`clean`, `suspicious`, `malicious`).
+   - **Stage 5 (Review Decisions, Approvals & Containment):** Analysts confirm real risks or dismiss false positives with written notes (re-scoring the scan), and approve or reject AI containment calls.
 
-4. **Dashboard Load** — The `WorkspaceDashboard` component calls `getWorkspace` which fetches organization membership, risk settings, and the most recent 100 scan records from Supabase.
+4. **Authenticated Server Functions (Box 4)** — Typed RPC endpoints created with TanStack Start's `createServerFn` and protected by `requireSupabaseAuth` middleware. Manages workspace creation, scan persistence, finding reviews, approval queue operations, and risk policy updates.
 
-5. **Skill Upload & Client-Side Scan** — The user uploads `.md`, `.txt`, `.json`, `.yaml`, `.zip`, or script files. The browser-side `readArtifact` function decodes and extracts files (including ZIP archives up to 20 MB).
+5. **AI Review Route (Server-Side) (Box 5)** — An authenticated `POST /api/ai-scan` endpoint that communicates with the AI Analysis Service (`openai/gpt-6-astra` via Lovable AI Gateway), streaming reasoning tokens and structured JSON findings via Server-Sent Events (SSE).
 
-6. **Deterministic Engine** — `scanArtifact` runs all 35 built-in rules plus any enabled custom checks against every line of every file. Structural checks (e.g., missing author/license) run post-scan. Findings are severity-weighted and scored.
+6. **Primary Data Store (Box 6)** — Supabase (PostgreSQL + Auth) stores organizations, RBAC memberships, risk settings, scan records, finding details, custom checks, and timestamped audit logs with Row-Level Security (RLS).
 
-7. **AI Streaming Review** — The client calls `/api/ai-scan` with artifact content and deterministic findings. The server streams GPT reasoning tokens back as Server-Sent Events; the `ThinkingLog` component renders them live.
-
-8. **Findings Merge & Save** — Novel AI findings are merged with deterministic findings, the score is recomputed, and the combined result is saved to Supabase via `saveScan`.
-
-9. **Review Workflow** — Analysts triage findings in the **History** or **Review Queue** tabs, marking them as real risks, false positives, or escalating to the approval queue. Every action re-scores the scan.
-
-10. **Policy Board** — Admins adjust score thresholds using sliders and immediately preview how their existing scans would be reclassified. Changes are persisted via `updateRiskSettings`.
+7. **Outputs & Visibility (Box 7)** — Surfaces scan results across dedicated dashboard views: Overview, Thinking Log (live reasoning stream), Scan Detail (evidence, score, remediation), History (audit trail and side-by-side comparison), Approval Queue, Policy Board, and Checks Library.
 
 ---
 
