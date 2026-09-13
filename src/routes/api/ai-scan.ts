@@ -87,10 +87,10 @@ export const Route = createFileRoute("/api/ai-scan")({
               const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : undefined;
               const base = error instanceof Error ? error.message : "AI analysis failed.";
               const message =
-                status === 402 ? `${base} Add AI credits in Lovable to continue.`
-                : status === 403 ? `${base} AI access is blocked by workspace policy.`
-                : status === 429 ? `${base} The AI service is busy; try again shortly.`
-                : status === 401 ? "Lovable AI is not configured correctly for this workspace."
+                status === 402 ? `${base} Insufficient OpenAI quota or credits. Add credits to your OpenAI account to continue.`
+                : status === 403 ? `${base} AI access is blocked by policy.`
+                : status === 429 ? `${base} The OpenAI service is rate limited; try again shortly.`
+                : status === 401 ? "OpenAI API key is invalid or not configured correctly."
                 : base;
               send({ type: "error", message });
             } finally {
