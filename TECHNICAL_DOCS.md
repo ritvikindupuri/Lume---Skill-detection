@@ -11,7 +11,7 @@
 2. [System Architecture](#2-system-architecture)
 3. [Agent Architecture](#3-agent-architecture)
 4. [Core Features](#4-core-features)
-   - 4.1 [Authentication — Email/Password & Google OAuth](#41-authentication--emailpassword--google-oauth)
+   - 4.1 [Authentication — Email & Password](#41-authentication--email--password)
    - 4.2 [Workspace Provisioning & RBAC](#42-workspace-provisioning--rbac)
    - 4.3 [Artifact Loading & File Ingestion](#43-artifact-loading--file-ingestion)
    - 4.4 [Deterministic Scan Engine](#44-deterministic-scan-engine)
@@ -47,7 +47,7 @@ Lume is a full-stack security intelligence platform purpose-built to detect mali
 
 Lume addresses this gap with a two-layer inspection pipeline. A deterministic rule engine with 35 checks derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF runs fully in the browser for speed and privacy, followed by a high-effort GPT model (`openai/gpt-6-astra`) that streams its analysis live as a reading log, surfacing semantic and multi-step threats that pattern matching alone cannot catch. The combined result is a 0 to 100 risk score, a three-tier verdict of clean, suspicious, or malicious, per-finding remediation guidance, a live AI reasoning stream, a human-in-the-loop approval and review workflow, configurable per-organization risk policies, a custom check library with AI-assisted authoring, exportable Markdown reports, a full audit trail, and scan comparison and risk trend visualization.
 
-The platform is built on TanStack Start (React 19, file-based SSR routing), backed by Supabase (PostgreSQL with Row-Level Security and enum-typed organization roles), and served via Vite 8 and Nitro. Authentication supports both email/password and native Google OAuth via Supabase. The AI layer uses the Vercel AI SDK (`streamText`) with `@ai-sdk/openai` connecting directly to OpenAI.
+The platform is built on TanStack Start (React 19, file-based SSR routing), backed by Supabase (PostgreSQL with Row-Level Security and enum-typed organization roles), and served via Vite 8 and Nitro. Authentication uses email and password with native Supabase Auth. The AI layer uses the Vercel AI SDK (`streamText`) with `@ai-sdk/openai` connecting directly to OpenAI.
 
 ---
 
@@ -228,24 +228,19 @@ maxRetries: 2
 
 ## 4. Core Features
 
-### 4.1 Authentication — Email/Password & Google OAuth
+### 4.1 Authentication — Email & Password
 
-**Files:** `src/components/auth/AuthPanel.tsx`, `src/routes/login.tsx`, `src/routes/auth.callback.tsx`, `src/integrations/supabase/client.ts`
+**Files:** `src/components/auth/AuthPanel.tsx`, `src/routes/login.tsx`, `src/integrations/supabase/client.ts`
 
-The `AuthPanel` component supports two authentication methods:
+The `AuthPanel` component provides authentication using native Supabase Auth:
 
-**Email/Password:**
-- Toggle between **Sign in** and **Create account** modes via a bottom link
-- Uses `supabase.auth.signInWithPassword({ email, password })` for sign-in
-- Uses `supabase.auth.signUp({ email, password, options: { emailRedirectTo: .../dashboard } })` for registration
+**Email/Password Flow:**
+- Toggle between **Sign in** and **Create account** modes via a bottom switch link
+- Uses `supabase.auth.signInWithPassword({ email, password })` for immediate sign-in
+- Uses `supabase.auth.signUp({ email, password, options: { emailRedirectTo: .../dashboard } })` for account creation
 - On successful sign-up without an immediate session, the user is instructed to check their email for a confirmation link
 - Password minimum length: 8 characters (enforced by the `minLength` HTML attribute)
-- `autoComplete` attributes are set correctly per mode (`current-password` / `new-password`)
-
-**Google OAuth:**
-- Uses native Supabase auth: `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: .../auth/callback } })`
-- If the provider redirects, the auth callback route (`/auth/callback`) handles the token exchange and redirects to `/dashboard`
-- If already resolved (e.g., pop-up flow), navigates directly to `/dashboard`
+- `autoComplete` attributes are configured per mode (`current-password` / `new-password`)
 
 **Session Protection:**
 - `WorkspaceDashboard` calls `supabase.auth.getSession()` on mount; unauthenticated users are immediately redirected to `/login`

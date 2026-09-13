@@ -185,11 +185,11 @@ npx drizzle-kit studio
 
 ## How to Use the App
 
-### Step 1 — Sign In
+### Step 1 — Sign In / Create Account
 
 1. Navigate to the app root (`/`).
 2. Click **Sign in** (top-right) or **Dashboard** — both redirect unauthenticated users to `/login`.
-3. On the Login page, enter your email and password (or click **Continue with Google**).
+3. On the Login page, enter your email and password (or click **New to Lume? Create an account** to register).
 4. After authenticating, you will be redirected to `/dashboard`.
 
 ---
