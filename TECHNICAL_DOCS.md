@@ -49,6 +49,8 @@ Lume addresses this gap with a two-layer inspection pipeline. A deterministic ru
 
 The platform is built on TanStack Start (React 19, file-based SSR routing), backed by Supabase (PostgreSQL with Row-Level Security and enum-typed organization roles), and served via Vite 8 and Nitro. Authentication uses email and password with native Supabase Auth. The AI layer uses the Vercel AI SDK (`streamText`) with `@ai-sdk/openai` connecting directly to OpenAI.
 
+**Live Application:** [https://lume---skill-detection.codeworker.workers.dev/](https://lume---skill-detection.codeworker.workers.dev/)
+
 ---
 
 ## 2. System Architecture
