@@ -39,11 +39,11 @@ export const Route = createFileRoute("/api/ai-scan")({
         if (!parsed.success) return new Response("Invalid request", { status: 400 });
         const data = parsed.data;
 
-        const lovableApiKey = process.env["LOVABLE_API_KEY"];
-        if (!lovableApiKey) return new Response("AI is not configured for this workspace.", { status: 500 });
+        const apiKey = process.env["OPENAI_API_KEY"];
+        if (!apiKey) return new Response("OpenAI API key is not configured for this workspace.", { status: 500 });
 
         const { createLumeAi } = await import("@/lib/ai-gateway.server");
-        const provider = createLumeAi(lovableApiKey);
+        const provider = createLumeAi(apiKey);
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream<Uint8Array>({

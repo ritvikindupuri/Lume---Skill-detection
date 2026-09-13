@@ -375,8 +375,8 @@ export const suggestCustomChecks = createServerFn({ method: "POST" })
     })).min(1).max(10),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const lovableApiKey = process.env["LOVABLE_API_KEY"];
-    if (!lovableApiKey) throw new Error("AI is not configured for this workspace.");
+    const apiKey = process.env["OPENAI_API_KEY"];
+    if (!apiKey) throw new Error("OpenAI API key is not configured for this workspace.");
 
     const existing = await context.supabase
       .from("custom_checks")
@@ -399,7 +399,7 @@ export const suggestCustomChecks = createServerFn({ method: "POST" })
 
     try {
       const result = streamText({
-        model: createLumeAi(lovableApiKey).responses(SUGGEST_MODEL),
+        model: createLumeAi(apiKey).responses(SUGGEST_MODEL),
         maxRetries: 2,
         providerOptions: {
           openai: { reasoningEffort: "high", reasoningSummary: "auto", forceReasoning: true, store: false },

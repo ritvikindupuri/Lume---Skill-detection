@@ -44,7 +44,7 @@ Lume is a full-stack security platform that scans Claude skill artifacts for hid
 
 4. **Authenticated Server Functions (Box 4)** — Typed RPC endpoints created with TanStack Start's `createServerFn` and protected by `requireSupabaseAuth` middleware. Manages workspace creation, scan persistence, finding reviews, approval queue operations, and risk policy updates.
 
-5. **AI Review Route (Server-Side) (Box 5)** — An authenticated `POST /api/ai-scan` endpoint that communicates with the AI Analysis Service (`openai/gpt-6-astra` via Lovable AI Gateway), streaming reasoning tokens and structured JSON findings via Server-Sent Events (SSE).
+5. **AI Review Route (Server-Side) (Box 5)** — An authenticated `POST /api/ai-scan` endpoint that communicates with the AI Analysis Service (`openai/gpt-6-astra` via `@ai-sdk/openai`), streaming reasoning tokens and structured JSON findings via Server-Sent Events (SSE).
 
 6. **Primary Data Store (Box 6)** — Supabase (PostgreSQL + Auth) stores organizations, RBAC memberships, risk settings, scan records, finding details, custom checks, and timestamped audit logs with Row-Level Security (RLS).
 
@@ -57,14 +57,14 @@ Lume is a full-stack security platform that scans Claude skill artifacts for hid
 | Layer | Technology |
 |---|---|
 | **Framework** | [TanStack Start](https://tanstack.com/start) (React 19, file-based routing) |
-| **Runtime** | [Bun](https://bun.sh) |
+| **Runtime** | [Bun](https://bun.sh) / [Node.js](https://nodejs.org) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com), [Radix UI](https://www.radix-ui.com) primitives, [shadcn/ui](https://ui.shadcn.com) component library |
 | **State / Data** | [TanStack Query](https://tanstack.com/query), TanStack Router |
 | **AI SDK** | [Vercel AI SDK](https://sdk.vercel.ai) (`ai` package) — `streamText` with SSE streaming |
-| **AI Model** | `openai/gpt-6-astra` via Lovable AI Gateway |
-| **Auth & Database** | [Supabase](https://supabase.com) (PostgreSQL + Row-Level Security + Auth) |
+| **AI Model** | `openai/gpt-6-astra` via `@ai-sdk/openai` |
+| **Auth & Database** | [Supabase](https://supabase.com) (PostgreSQL + Row-Level Security + Native Auth) |
 | **ORM / Migrations** | [Drizzle ORM](https://orm.drizzle.team) + [Drizzle Kit](https://orm.drizzle.team/kit-docs/overview) |
-| **Build** | [Vite](https://vitejs.dev) 8 + [@lovable.dev/vite-tanstack-config](https://lovable.dev) |
+| **Build** | [Vite](https://vitejs.dev) 8 + [@tanstack/react-start](https://tanstack.com/start) |
 | **Server Runtime** | [Nitro](https://nitro.build) |
 | **Validation** | [Zod](https://zod.dev) |
 | **Icons** | [Lucide React](https://lucide.dev) |
@@ -79,10 +79,9 @@ Lume is a full-stack security platform that scans Claude skill artifacts for hid
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) >= 1.3 (`npm install -g bun` or `curl -fsSL https://bun.sh/install | bash`)
+- [Bun](https://bun.sh) >= 1.3 or [Node.js](https://nodejs.org) >= 18
 - A [Supabase](https://supabase.com) project (free tier works)
-- A [Lovable](https://lovable.dev) account with an API key (for AI features)
-- Node.js 18+ (for tooling compatibility; Bun is the primary runtime)
+- An [OpenAI](https://platform.openai.com) API key (for AI scanning features)
 - Git
 
 ---
@@ -98,6 +97,7 @@ cd Lume---Skill-detection
 
 ```bash
 bun install
+# or: npm install
 ```
 
 ### 3. Configure Environment Variables
@@ -117,8 +117,8 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 
-# Lovable AI — found in your Lovable project settings
-LOVABLE_API_KEY=<your-lovable-api-key>
+# OpenAI — your OpenAI API key
+OPENAI_API_KEY=<your-openai-api-key>
 ```
 
 > **Note:** `SUPABASE_URL` and `VITE_SUPABASE_URL` should be identical. The `VITE_` prefix exposes the value to the browser bundle; the unprefixed version is used by server functions.
@@ -144,27 +144,30 @@ Alternatively, run the SQL files in `supabase/migrations/` manually in the Supab
 
 ```bash
 bun run dev
+# or: npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ### 6. Build for Production
 
 ```bash
 bun run build
+# or: npm run build
 ```
 
 ### 7. Preview the Production Build
 
 ```bash
 bun run preview
+# or: npm run preview
 ```
 
 ---
 
 ### Optional: Enable Drizzle Studio (Database Viewer)
 
-If you have `LOVABLE_DB_MIGRATION_URL` set (a direct Postgres connection string from Supabase):
+If you have `DATABASE_URL` set (a direct Postgres connection string from Supabase):
 
 ```bash
 npx drizzle-kit studio

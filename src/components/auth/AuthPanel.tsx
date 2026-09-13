@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Chrome, LoaderCircle } from "lucide-react";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,13 +29,16 @@ export function AuthPanel() {
   const google = async () => {
     setBusy(true);
     setMessage(null);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth/callback` });
-    if (result.error) {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
       setBusy(false);
-      setMessage(result.error.message);
-      return;
+      setMessage(error.message);
     }
-    if (!result.redirected) await navigate({ to: "/dashboard" });
   };
 
   return (

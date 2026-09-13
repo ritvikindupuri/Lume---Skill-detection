@@ -32,7 +32,7 @@
    - 4.19 [Containment System](#419-containment-system)
    - 4.20 [Markdown Report Export](#420-markdown-report-export)
    - 4.21 [Server-Side Error Handling & h3 Recovery](#421-server-side-error-handling--h3-recovery)
-   - 4.22 [AI Gateway Integration (Lovable)](#422-ai-gateway-integration-lovable)
+   - 4.22 [AI Model & SDK Integration (OpenAI)](#422-ai-model--sdk-integration-openai)
    - 4.23 [Context-Aware Tooltip System](#423-context-aware-tooltip-system)
 5. [Database Schema (Full)](#5-database-schema-full)
 6. [API Reference](#6-api-reference)
@@ -47,7 +47,7 @@ Lume is a full-stack security intelligence platform purpose-built to detect mali
 
 Lume addresses this gap with a two-layer inspection pipeline. A deterministic rule engine with 35 checks derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF runs fully in the browser for speed and privacy, followed by a high-effort GPT model (`openai/gpt-6-astra`) that streams its analysis live as a reading log, surfacing semantic and multi-step threats that pattern matching alone cannot catch. The combined result is a 0 to 100 risk score, a three-tier verdict of clean, suspicious, or malicious, per-finding remediation guidance, a live AI reasoning stream, a human-in-the-loop approval and review workflow, configurable per-organization risk policies, a custom check library with AI-assisted authoring, exportable Markdown reports, a full audit trail, and scan comparison and risk trend visualization.
 
-The platform is built on TanStack Start (React 19, file-based SSR routing), backed by Supabase (PostgreSQL with Row-Level Security and enum-typed organization roles), and served via Vite 8 and Nitro. Authentication supports both email/password and Google OAuth. The AI layer uses the Vercel AI SDK (`streamText`) against a Lovable AI Gateway (OpenAI-compatible endpoint).
+The platform is built on TanStack Start (React 19, file-based SSR routing), backed by Supabase (PostgreSQL with Row-Level Security and enum-typed organization roles), and served via Vite 8 and Nitro. Authentication supports both email/password and native Google OAuth via Supabase. The AI layer uses the Vercel AI SDK (`streamText`) with `@ai-sdk/openai` connecting directly to OpenAI.
 
 ---
 
@@ -85,7 +85,7 @@ The platform is built on TanStack Start (React 19, file-based SSR routing), back
 
 5. **AI Review Route — Server-Side (Box 5 — `api/ai-scan.ts`):**
    - **Authenticated Streaming Route:** Validates incoming Bearer JWTs and parses payloads with strict Zod schemas.
-   - **AI Analysis Service Integration:** Instantiates the Lovable AI Gateway client (`openai/gpt-6-astra` with `reasoningEffort: "high"`) using `createLumeAi()`.
+   - **AI Analysis Service Integration:** Instantiates the OpenAI SDK client (`openai/gpt-6-astra` with `reasoningEffort: "high"`) using `createLumeAi()`.
    - **Real-Time SSE Streaming:** Streams text deltas as Server-Sent Events (`{ type: "reasoning", text }`) to the client, parses the final JSON block, normalizes findings and containment recommendations, and emits the completion event (`{ type: "done", findings, recommendation }`).
 
 6. **Primary Data Store (Box 6 — Supabase PostgreSQL + Auth):**
@@ -230,7 +230,7 @@ maxRetries: 2
 
 ### 4.1 Authentication — Email/Password & Google OAuth
 
-**Files:** `src/components/auth/AuthPanel.tsx`, `src/routes/login.tsx`, `src/routes/auth.callback.tsx`, `src/integrations/supabase/client.ts`, `src/integrations/lovable/index.ts`
+**Files:** `src/components/auth/AuthPanel.tsx`, `src/routes/login.tsx`, `src/routes/auth.callback.tsx`, `src/integrations/supabase/client.ts`
 
 The `AuthPanel` component supports two authentication methods:
 
@@ -243,7 +243,7 @@ The `AuthPanel` component supports two authentication methods:
 - `autoComplete` attributes are set correctly per mode (`current-password` / `new-password`)
 
 **Google OAuth:**
-- Uses `lovable.auth.signInWithOAuth("google", { redirect_uri: .../auth/callback })` from the `@lovable.dev/cloud-auth-js` integration
+- Uses native Supabase auth: `supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: .../auth/callback } })`
 - If the provider redirects, the auth callback route (`/auth/callback`) handles the token exchange and redirects to `/dashboard`
 - If already resolved (e.g., pop-up flow), navigates directly to `/dashboard`
 
@@ -551,7 +551,7 @@ The POST handler performs in sequence:
    - `artifactName`: string, 1–255 chars
    - `content`: string, 1–500,000 chars
    - `deterministicFindings`: array (≤200) of `{ruleId, title, severity, file, line, evidence}`
-3. **AI provider creation:** `createLumeAi(lovableApiKey)` constructs an `@ai-sdk/openai` instance pointing to `https://ai.gateway.lovable.dev/v1` with `Lovable-API-Key` and `X-Lovable-AIG-SDK` headers.
+3. **AI provider creation:** `createLumeAi(apiKey)` constructs an `@ai-sdk/openai` instance using `createOpenAI({ apiKey })` connecting directly to OpenAI.
 4. **Streaming:** Calls `streamText` with `AI_MODEL`, the system prompt, and the user prompt built by `aiUserPrompt(artifactName, deterministicFindings, content)`. Binds `abortSignal: request.signal` so cancellation propagates.
 5. **Reading log extraction:** As text deltas arrive, the output string is split at the first ` ``` ` fence. Everything before the fence is the reviewer-facing reading log. New characters beyond the last-streamed position are emitted as `{ type: "reasoning", text }` SSE events in real time.
 6. **Completion:** On stream end, `extractJson(output)` parses the JSON block from the fenced section. `normalizeFindings` and `normalizeRecommendation` validate and clean the data. A `{ type: "done", model, findings, recommendation }` event is emitted.
@@ -874,26 +874,21 @@ The `toMarkdown(result: ScanResult)` function generates a structured Markdown se
 
 ---
 
-### 4.22 AI Gateway Integration (Lovable)
+### 4.22 AI Model & SDK Integration (OpenAI)
 
 **File:** `src/lib/ai-gateway.server.ts`
 
-`createLumeAi(lovableApiKey: string)` constructs an OpenAI-compatible SDK provider using `createOpenAI` from `@ai-sdk/openai`:
+`createLumeAi(apiKey: string)` constructs an OpenAI SDK provider using `createOpenAI` from `@ai-sdk/openai`:
 
 ```ts
 createOpenAI({
-  baseURL: "https://ai.gateway.lovable.dev/v1",
-  apiKey: "gateway-managed",               // not used for auth; key is in header
-  headers: {
-    "Lovable-API-Key": lovableApiKey,       // project-level auth
-    "X-Lovable-AIG-SDK": "vercel-ai-sdk",  // telemetry tag
-  },
+  apiKey,
 })
 ```
 
-This factory is called once per AI request (both scan and suggestion), ensuring each request carries fresh credentials. The `apiKey: "gateway-managed"` placeholder is required by the SDK interface but is not used for authentication — the actual auth is the `Lovable-API-Key` header.
+This factory is called per AI request (both scan and suggestion), ensuring each request carries the configured `OPENAI_API_KEY`.
 
-Both agents use the same model (`openai/gpt-6-astra`) and the same gateway, but with different system prompts, provider options, and response handling.
+Both agents use the same model (`openai/gpt-6-astra`), but with different system prompts, provider options, and response handling.
 
 ---
 
@@ -1059,7 +1054,7 @@ Streams a GPT security review of a skill artifact as Server-Sent Events.
 **HTTP error responses:**
 - `401 Unauthorized` — missing, malformed, or expired JWT
 - `400 Invalid request` — Zod validation failure (body schema mismatch)
-- `500` — `LOVABLE_API_KEY` environment variable not set
+- `500` — `OPENAI_API_KEY` environment variable not set
 
 ---
 
@@ -1129,7 +1124,7 @@ The `canEdit` flag gates all mutation UI (review findings, manage checks, approv
 | Approval queue findings loaded | 200 records |
 
 **8. No secrets on the client**
-`LOVABLE_API_KEY`, `SUPABASE_URL` (server-side), and `SUPABASE_PUBLISHABLE_KEY` (server-side) are only read from `process.env` inside server functions and the API route. The client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable — not secret keys).
+`OPENAI_API_KEY`, `SUPABASE_URL` (server-side), and `SUPABASE_PUBLISHABLE_KEY` (server-side) are only read from `process.env` inside server functions and the API route. The client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable — not secret keys).
 
 ---
 
