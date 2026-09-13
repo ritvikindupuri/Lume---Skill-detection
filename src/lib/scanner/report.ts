@@ -9,9 +9,15 @@ export function toMarkdown(r: ScanResult): string {
   lines.push(`- SHA-256: \`${r.sha256}\``);
   lines.push(`- Scanned: ${r.scannedAt} (${r.durationMs} ms)`);
   lines.push(`- Rules evaluated: ${r.rulesEvaluated}`);
-  lines.push(`- AI review: ${r.ai ? `${r.ai.model} · ${r.ai.findings} additional finding(s)` : "not run"}`);
-  lines.push(`- Verdict: **${r.verdict.toUpperCase()}** · policy-adjusted risk score ${r.score}/100`);
-  lines.push(`- Inherent score: ${r.rawScore}/100 · review at ${r.policy.acceptableScore} · block at ${r.policy.maliciousScore}`);
+  lines.push(
+    `- AI review: ${r.ai ? `${r.ai.model} · ${r.ai.findings} additional finding(s)` : "not run"}`,
+  );
+  lines.push(
+    `- Verdict: **${r.verdict.toUpperCase()}** · policy-adjusted risk score ${r.score}/100`,
+  );
+  lines.push(
+    `- Inherent score: ${r.rawScore}/100 · review at ${r.policy.acceptableScore} · block at ${r.policy.maliciousScore}`,
+  );
   lines.push(
     `- Findings: ${r.counts.critical} critical · ${r.counts.high} high · ${r.counts.medium} medium · ${r.counts.low} low`,
   );
@@ -29,7 +35,9 @@ export function toMarkdown(r: ScanResult): string {
 
   lines.push(`## Files analyzed (${r.files.length})`);
   for (const f of r.files) {
-    lines.push(`- \`${f.path}\` — ${f.size} bytes${f.binary ? " (binary)" : ""}, ${f.findings} finding(s)`);
+    lines.push(
+      `- \`${f.path}\` — ${f.size} bytes${f.binary ? " (binary)" : ""}, ${f.findings} finding(s)`,
+    );
   }
   lines.push("");
 
@@ -47,7 +55,9 @@ export function toMarkdown(r: ScanResult): string {
     lines.push("");
     lines.push(`### [${f.severity.toUpperCase()}] ${f.ruleId} — ${f.title}`);
     lines.push(`- Layer: ${LAYER_LABEL[f.layer]}`);
-    lines.push(`- Detected by: ${f.source === "ai" ? "AI intent review" : f.source === "custom" ? "workspace check" : "built-in check"} · confidence ${f.confidence}%`);
+    lines.push(
+      `- Detected by: ${f.source === "ai" ? "AI intent review" : f.source === "custom" ? "workspace check" : "built-in check"} · confidence ${f.confidence}%`,
+    );
     lines.push(`- Location: \`${f.file}\`${f.line ? `:${f.line}` : ""}`);
     lines.push(`- Evidence: \`${f.evidence.replace(/`/g, "'")}\``);
     lines.push(`- Why it matters: ${f.rationale}`);

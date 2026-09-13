@@ -2,19 +2,30 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { streamText } from "ai";
 import { z } from "zod";
-import { AI_MODEL, AI_SYSTEM_PROMPT, aiUserPrompt, extractJson, normalizeFindings, normalizeRecommendation } from "@/lib/ai-findings";
+import {
+  AI_MODEL,
+  AI_SYSTEM_PROMPT,
+  aiUserPrompt,
+  extractJson,
+  normalizeFindings,
+  normalizeRecommendation,
+} from "@/lib/ai-findings";
 
 const bodySchema = z.object({
   artifactName: z.string().min(1).max(255),
   content: z.string().min(1).max(500_000),
-  deterministicFindings: z.array(z.object({
-    ruleId: z.string(),
-    title: z.string(),
-    severity: z.enum(["critical", "high", "medium", "low"]),
-    file: z.string(),
-    line: z.number(),
-    evidence: z.string(),
-  })).max(200),
+  deterministicFindings: z
+    .array(
+      z.object({
+        ruleId: z.string(),
+        title: z.string(),
+        severity: z.enum(["critical", "high", "medium", "low"]),
+        file: z.string(),
+        line: z.number(),
+        evidence: z.string(),
+      }),
+    )
+    .max(200),
 });
 
 async function authorize(request: Request): Promise<boolean> {
@@ -24,7 +35,9 @@ async function authorize(request: Request): Promise<boolean> {
   if (!url || !key || !header.startsWith("Bearer ")) return false;
   const token = header.slice(7);
   if (token.split(".").length !== 3) return false;
-  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const { data, error } = await supabase.auth.getClaims(token);
   return !error && Boolean(data?.claims?.sub);
 }
@@ -40,7 +53,10 @@ export const Route = createFileRoute("/api/ai-scan")({
         const data = parsed.data;
 
         const apiKey = process.env["OPENAI_API_KEY"];
-        if (!apiKey) return new Response("OpenAI API key is not configured for this workspace.", { status: 500 });
+        if (!apiKey)
+          return new Response("OpenAI API key is not configured for this workspace.", {
+            status: 500,
+          });
 
         const { createLumeAi } = await import("@/lib/ai-gateway.server");
         const provider = createLumeAi(apiKey);
@@ -55,7 +71,13 @@ export const Route = createFileRoute("/api/ai-scan")({
                 model: provider.responses(AI_MODEL),
                 maxRetries: 2,
                 providerOptions: {
-                  openai: { reasoningEffort: "high", reasoningSummary: "detailed", forceReasoning: true, store: false, include: ["reasoning.encrypted_content"] },
+                  openai: {
+                    reasoningEffort: "high",
+                    reasoningSummary: "detailed",
+                    forceReasoning: true,
+                    store: false,
+                    include: ["reasoning.encrypted_content"],
+                  },
                 },
                 system: AI_SYSTEM_PROMPT,
                 prompt: aiUserPrompt(data.artifactName, data.deterministicFindings, data.content),
@@ -82,16 +104,28 @@ export const Route = createFileRoute("/api/ai-scan")({
               }
               flushLog();
               const parsedJson = extractJson(output || (await result.text));
-              send({ type: "done", model: AI_MODEL, findings: normalizeFindings(parsedJson), recommendation: normalizeRecommendation(parsedJson) });
+              send({
+                type: "done",
+                model: AI_MODEL,
+                findings: normalizeFindings(parsedJson),
+                recommendation: normalizeRecommendation(parsedJson),
+              });
             } catch (error) {
-              const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : undefined;
+              const status =
+                typeof error === "object" && error && "statusCode" in error
+                  ? Number(error.statusCode)
+                  : undefined;
               const base = error instanceof Error ? error.message : "AI analysis failed.";
               const message =
-                status === 402 ? `${base} Insufficient OpenAI quota or credits. Add credits to your OpenAI account to continue.`
-                : status === 403 ? `${base} AI access is blocked by policy.`
-                : status === 429 ? `${base} The OpenAI service is rate limited; try again shortly.`
-                : status === 401 ? "OpenAI API key is invalid or not configured correctly."
-                : base;
+                status === 402
+                  ? `${base} Insufficient OpenAI quota or credits. Add credits to your OpenAI account to continue.`
+                  : status === 403
+                    ? `${base} AI access is blocked by policy.`
+                    : status === 429
+                      ? `${base} The OpenAI service is rate limited; try again shortly.`
+                      : status === 401
+                        ? "OpenAI API key is invalid or not configured correctly."
+                        : base;
               send({ type: "error", message });
             } finally {
               controller.close();

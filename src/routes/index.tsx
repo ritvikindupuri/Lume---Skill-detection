@@ -7,7 +7,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Lume — Claude Skill Security" },
-      { name: "description", content: "Scan Claude skills with 35 security controls and the strongest GPT analysis for hidden intent, unsafe behavior, and data leakage." },
+      {
+        name: "description",
+        content:
+          "Scan Claude skills with 35 security controls and the strongest GPT analysis for hidden intent, unsafe behavior, and data leakage.",
+      },
       { property: "og:title", content: "Lume — Claude Skill Security" },
       { property: "og:description", content: "See the risk before it runs." },
       { property: "og:type", content: "website" },
@@ -24,8 +28,12 @@ function Index() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 sm:px-8">
           <Logo />
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="rounded-full px-4"><Link to="/login">Sign in</Link></Button>
-            <Button asChild size="sm" className="rounded-full px-4 shadow-none"><Link to="/dashboard">Dashboard</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="rounded-full px-4">
+              <Link to="/login">Sign in</Link>
+            </Button>
+            <Button asChild size="sm" className="rounded-full px-4 shadow-none">
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -45,7 +53,12 @@ function Index() {
               <Button asChild size="lg" className="h-12 rounded-2xl px-7 text-[15px] shadow-lg">
                 <Link to="/dashboard">Open dashboard</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl px-6 text-[15px]">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="h-12 rounded-2xl px-6 text-[15px]"
+              >
                 <Link to="/login">Sign in</Link>
               </Button>
             </div>
@@ -69,14 +82,21 @@ function Index() {
 
         <section className="border-y border-border bg-card px-5 py-20 text-center">
           <Sparkles className="mx-auto size-7 text-primary" strokeWidth={1.5} />
-          <p className="mx-auto mt-5 max-w-3xl text-balance font-display text-3xl font-medium sm:text-5xl">Local rules. Deep AI review. Clear evidence.</p>
+          <p className="mx-auto mt-5 max-w-3xl text-balance font-display text-3xl font-medium sm:text-5xl">
+            Local rules. Deep AI review. Clear evidence.
+          </p>
         </section>
 
         <section className="px-4 py-20 sm:px-6 sm:py-28" aria-labelledby="product-preview-title">
           <div className="mx-auto max-w-5xl">
             <div className="mb-8 flex items-center justify-center gap-2 text-primary">
               <Play className="size-4" fill="currentColor" />
-              <h2 id="product-preview-title" className="font-display text-lg font-medium text-foreground">See Lume work.</h2>
+              <h2
+                id="product-preview-title"
+                className="font-display text-lg font-medium text-foreground"
+              >
+                See Lume work.
+              </h2>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
               <video
@@ -104,7 +124,7 @@ function Index() {
       <footer className="border-t border-border px-5 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between text-sm text-muted-foreground">
           <Logo />
-           <span>Claude skill security.</span>
+          <span>Claude skill security.</span>
         </div>
       </footer>
     </div>

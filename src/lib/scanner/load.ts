@@ -75,7 +75,9 @@ export async function readArtifact(
   return { name: rootName, files: out };
 }
 
-export async function readPastedSkill(text: string): Promise<{ name: string; files: ArtifactFile[] }> {
+export async function readPastedSkill(
+  text: string,
+): Promise<{ name: string; files: ArtifactFile[] }> {
   if (!text.trim()) throw new ArtifactError("Paste the contents of a SKILL.md first.");
   return {
     name: "SKILL.md (pasted)",

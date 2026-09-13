@@ -84,8 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Lume — Claude Skill Security" },
       {
         property: "og:description",
-        content:
-          "Know what a Claude skill will do before you trust it.",
+        content: "Know what a Claude skill will do before you trust it.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

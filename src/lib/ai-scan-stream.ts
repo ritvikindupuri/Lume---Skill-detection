@@ -6,7 +6,14 @@ import type { Severity } from "./scanner/rules";
 export interface AiScanPayload {
   artifactName: string;
   content: string;
-  deterministicFindings: { ruleId: string; title: string; severity: Severity; file: string; line: number; evidence: string }[];
+  deterministicFindings: {
+    ruleId: string;
+    title: string;
+    severity: Severity;
+    file: string;
+    line: number;
+    evidence: string;
+  }[];
 }
 
 /** Streams the GPT review, emitting reasoning text as it arrives. */
@@ -23,12 +30,17 @@ export async function streamAiScan(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   });
-  if (!response.ok || !response.body) throw new Error(await response.text().catch(() => "AI analysis failed."));
+  if (!response.ok || !response.body)
+    throw new Error(await response.text().catch(() => "AI analysis failed."));
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let result: { model: string; findings: Finding[]; recommendation: AiRecommendation | null } | null = null;
+  let result: {
+    model: string;
+    findings: Finding[];
+    recommendation: AiRecommendation | null;
+  } | null = null;
   let failure: string | null = null;
 
   for (;;) {
@@ -40,9 +52,21 @@ export async function streamAiScan(
     for (const chunk of chunks) {
       const line = chunk.split("\n").find((item) => item.startsWith("data: "));
       if (!line) continue;
-      const event = JSON.parse(line.slice(6)) as { type: string; text?: string; message?: string; model?: string; findings?: Finding[]; recommendation?: AiRecommendation | null };
+      const event = JSON.parse(line.slice(6)) as {
+        type: string;
+        text?: string;
+        message?: string;
+        model?: string;
+        findings?: Finding[];
+        recommendation?: AiRecommendation | null;
+      };
       if (event.type === "reasoning" && event.text) onReasoning(event.text);
-      else if (event.type === "done") result = { model: event.model ?? "openai/gpt-6-astra", findings: event.findings ?? [], recommendation: event.recommendation ?? null };
+      else if (event.type === "done")
+        result = {
+          model: event.model ?? "openai/gpt-6-astra",
+          findings: event.findings ?? [],
+          recommendation: event.recommendation ?? null,
+        };
       else if (event.type === "error") failure = event.message ?? "AI analysis failed.";
     }
   }

@@ -67,7 +67,13 @@ export interface ScanResult {
   findings: Finding[];
   counts: Record<Severity, number>;
   endpoints: Endpoint[];
-  metadata: { name?: string; description?: string; author?: string; license?: string; tools?: string[] };
+  metadata: {
+    name?: string;
+    description?: string;
+    author?: string;
+    license?: string;
+    tools?: string[];
+  };
   score: number;
   rawScore: number;
   verdict: Verdict;
@@ -102,13 +108,17 @@ export function normalizePolicy(policy: RiskConfig): RiskConfig {
  * 4. the inherent score is mapped onto the workspace thresholds,
  * 5. the verdict follows the thresholds (and the critical override).
  */
-export function computeScore(counts: Record<Severity, number>, riskConfig: RiskConfig): ScoreBreakdown {
+export function computeScore(
+  counts: Record<Severity, number>,
+  riskConfig: RiskConfig,
+): ScoreBreakdown {
   const policy = normalizePolicy(riskConfig);
   const steps: ScoreStep[] = [];
   let raw = 0;
   for (const severity of SEVERITY_ORDER) {
     let contribution = 0;
-    for (let i = 0; i < counts[severity]; i++) contribution += SEVERITY_WEIGHT[severity] / (1 + i * 0.55);
+    for (let i = 0; i < counts[severity]; i++)
+      contribution += SEVERITY_WEIGHT[severity] / (1 + i * 0.55);
     raw += contribution;
     steps.push({
       severity,
@@ -150,13 +160,32 @@ function sortFindings(findings: Finding[]): Finding[] {
   );
 }
 
-export function mergeAiFindings(result: ScanResult, aiFindings: Finding[], model: string): ScanResult {
-  const existing = new Set(result.findings.map((finding) => `${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
-  const novel = aiFindings.filter((finding) => !existing.has(`${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`));
+export function mergeAiFindings(
+  result: ScanResult,
+  aiFindings: Finding[],
+  model: string,
+): ScanResult {
+  const existing = new Set(
+    result.findings.map(
+      (finding) => `${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`,
+    ),
+  );
+  const novel = aiFindings.filter(
+    (finding) => !existing.has(`${finding.file}:${finding.line}:${finding.evidence.toLowerCase()}`),
+  );
   const findings = sortFindings([...result.findings, ...novel]);
   const counts = countBySeverity(findings);
   const { steps, rawScore, score, verdict } = computeScore(counts, result.policy);
-  return { ...result, findings, counts, rawScore, score, verdict, breakdown: steps, ai: { model, findings: novel.length } };
+  return {
+    ...result,
+    findings,
+    counts,
+    rawScore,
+    score,
+    verdict,
+    breakdown: steps,
+    ai: { model, findings: novel.length },
+  };
 }
 
 function rule(id: string) {

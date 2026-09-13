@@ -39,28 +39,60 @@
   --animate-lume: lume 5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 
   @keyframes reveal {
-    from { opacity: 0; transform: translateY(18px) scale(0.985); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
   }
   @keyframes scanline {
-    0% { top: 8%; opacity: 0; }
-    20%, 80% { opacity: 1; }
-    100% { top: 92%; opacity: 0; }
+    0% {
+      top: 8%;
+      opacity: 0;
+    }
+    20%,
+    80% {
+      opacity: 1;
+    }
+    100% {
+      top: 92%;
+      opacity: 0;
+    }
   }
   @keyframes lume {
-    0%, 82%, 100% { transform: rotate(0deg) scale(1); }
-    88% { transform: rotate(3deg) scale(1.035); }
-    94% { transform: rotate(-2deg) scale(1.015); }
+    0%,
+    82%,
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+    88% {
+      transform: rotate(3deg) scale(1.035);
+    }
+    94% {
+      transform: rotate(-2deg) scale(1.015);
+    }
   }
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     margin: 0;
     background: var(--color-background);
@@ -68,19 +100,30 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
-  button, a { -webkit-tap-highlight-color: transparent; }
-  ::selection { background: color-mix(in oklab, var(--color-primary) 35%, transparent); }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
 }
 
 @utility glass-panel {
   background: color-mix(in oklab, var(--color-card) 88%, transparent);
   border: 1px solid var(--color-border);
-  box-shadow: 0 35px 100px color-mix(in oklab, var(--color-background) 75%, transparent), inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 7%, transparent);
+  box-shadow:
+    0 35px 100px color-mix(in oklab, var(--color-background) 75%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--color-foreground) 7%, transparent);
   backdrop-filter: blur(24px);
 }
 
 @utility text-gradient {
-  background: linear-gradient(180deg, var(--color-foreground), color-mix(in oklab, var(--color-foreground) 55%, transparent));
+  background: linear-gradient(
+    180deg,
+    var(--color-foreground),
+    color-mix(in oklab, var(--color-foreground) 55%, transparent)
+  );
   background-clip: text;
   color: transparent;
 }
@@ -102,9 +145,17 @@
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   font-weight: 600;
-  transition: transform 160ms ease, filter 160ms ease;
-  &:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
-  &:disabled { cursor: not-allowed; opacity: 0.4; }
+  transition:
+    transform 160ms ease,
+    filter 160ms ease;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 }
 
 @utility btn-ink {
@@ -112,9 +163,17 @@
   background: var(--color-foreground);
   color: var(--color-background);
   font-weight: 600;
-  transition: transform 160ms ease, opacity 160ms ease;
-  &:hover:not(:disabled) { transform: translateY(-1px); opacity: 0.9; }
-  &:disabled { cursor: not-allowed; opacity: 0.4; }
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    opacity: 0.9;
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 }
 
 @utility btn-quiet {
@@ -123,10 +182,21 @@
   color: var(--color-foreground);
   font-weight: 600;
   transition: background-color 160ms ease;
-  &:hover:not(:disabled) { background: var(--color-accent); }
-  &:disabled { cursor: not-allowed; opacity: 0.4; }
+  &:hover:not(:disabled) {
+    background: var(--color-accent);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

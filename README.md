@@ -10,18 +10,18 @@ Lume is a full-stack security platform that scans Claude skill artifacts for hid
 
 ## Key Features
 
-| Feature | Description |
-|---|---|
+| Feature                          | Description                                                                                                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **35-Rule Deterministic Engine** | Regex-based checks derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF covering prompt injection, data exfiltration, privilege escalation, supply-chain compromise, bias, and more |
-| **Live AI Review (GPT)** | Streams real-time reasoning from a high-effort GPT model that reads the skill top-to-bottom, surfacing multi-step threats the deterministic rules miss |
-| **Risk Scoring** | A calibrated 0–100 score with configurable thresholds for "review" and "block" verdicts; supports automatic blocking on any critical finding |
-| **Custom Checks Library** | Teams can add their own regex-based detection rules; the AI can suggest new checks automatically by reading skill content |
-| **Approval Workflow** | Human-in-the-loop review queue: analysts confirm or dismiss findings; AI containment calls wait for human sign-off before enforcement |
-| **Policy Board** | Workspace admins configure score thresholds and preview how policy changes would reclassify existing scans in real time |
-| **Scan History & Comparison** | Full audit trail with timestamps, verdict history, risk trend chart, and side-by-side comparison of any two scans |
-| **Containment Actions** | Skills can be quarantined (blocked) or cleared; every decision is timestamped and attributed |
-| **Workspace & RBAC** | Per-organization workspaces with admin and analyst roles; viewers can observe but cannot modify |
-| **ZIP & Multi-File Support** | Upload individual files, multi-file selections, or .zip archives up to 20 MB |
+| **Live AI Review (GPT)**         | Streams real-time reasoning from a high-effort GPT model that reads the skill top-to-bottom, surfacing multi-step threats the deterministic rules miss                                     |
+| **Risk Scoring**                 | A calibrated 0–100 score with configurable thresholds for "review" and "block" verdicts; supports automatic blocking on any critical finding                                               |
+| **Custom Checks Library**        | Teams can add their own regex-based detection rules; the AI can suggest new checks automatically by reading skill content                                                                  |
+| **Approval Workflow**            | Human-in-the-loop review queue: analysts confirm or dismiss findings; AI containment calls wait for human sign-off before enforcement                                                      |
+| **Policy Board**                 | Workspace admins configure score thresholds and preview how policy changes would reclassify existing scans in real time                                                                    |
+| **Scan History & Comparison**    | Full audit trail with timestamps, verdict history, risk trend chart, and side-by-side comparison of any two scans                                                                          |
+| **Containment Actions**          | Skills can be quarantined (blocked) or cleared; every decision is timestamped and attributed                                                                                               |
+| **Workspace & RBAC**             | Per-organization workspaces with admin and analyst roles; viewers can observe but cannot modify                                                                                            |
+| **ZIP & Multi-File Support**     | Upload individual files, multi-file selections, or .zip archives up to 20 MB                                                                                                               |
 
 ---
 
@@ -56,24 +56,24 @@ Lume is a full-stack security platform that scans Claude skill artifacts for hid
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Framework** | [TanStack Start](https://tanstack.com/start) (React 19, file-based routing) |
-| **Runtime** | [Bun](https://bun.sh) / [Node.js](https://nodejs.org) |
-| **Styling** | [Tailwind CSS v4](https://tailwindcss.com), [Radix UI](https://www.radix-ui.com) primitives, [shadcn/ui](https://ui.shadcn.com) component library |
-| **State / Data** | [TanStack Query](https://tanstack.com/query), TanStack Router |
-| **AI SDK** | [Vercel AI SDK](https://sdk.vercel.ai) (`ai` package) — `streamText` with SSE streaming |
-| **AI Model** | `openai/gpt-6-astra` via `@ai-sdk/openai` |
-| **Auth & Database** | [Supabase](https://supabase.com) (PostgreSQL + Row-Level Security + Native Auth) |
-| **ORM / Migrations** | [Drizzle ORM](https://orm.drizzle.team) + [Drizzle Kit](https://orm.drizzle.team/kit-docs/overview) |
-| **Build** | [Vite](https://vitejs.dev) 8 + [@tanstack/react-start](https://tanstack.com/start) |
-| **Server Runtime** | [Nitro](https://nitro.build) |
-| **Validation** | [Zod](https://zod.dev) |
-| **Icons** | [Lucide React](https://lucide.dev) |
-| **Toasts** | [Sonner](https://sonner.emilkowal.ski) |
-| **Charts** | [Recharts](https://recharts.org) |
-| **Linting / Formatting** | [ESLint](https://eslint.org) + [Prettier](https://prettier.io) |
-| **Type Safety** | [TypeScript](https://www.typescriptlang.org) 5.x |
+| Layer                    | Technology                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Framework**            | [TanStack Start](https://tanstack.com/start) (React 19, file-based routing)                                                                       |
+| **Runtime**              | [Bun](https://bun.sh) / [Node.js](https://nodejs.org)                                                                                             |
+| **Styling**              | [Tailwind CSS v4](https://tailwindcss.com), [Radix UI](https://www.radix-ui.com) primitives, [shadcn/ui](https://ui.shadcn.com) component library |
+| **State / Data**         | [TanStack Query](https://tanstack.com/query), TanStack Router                                                                                     |
+| **AI SDK**               | [Vercel AI SDK](https://sdk.vercel.ai) (`ai` package) — `streamText` with SSE streaming                                                           |
+| **AI Model**             | `openai/gpt-6-astra` via `@ai-sdk/openai`                                                                                                         |
+| **Auth & Database**      | [Supabase](https://supabase.com) (PostgreSQL + Row-Level Security + Native Auth)                                                                  |
+| **ORM / Migrations**     | [Drizzle ORM](https://orm.drizzle.team) + [Drizzle Kit](https://orm.drizzle.team/kit-docs/overview)                                               |
+| **Build**                | [Vite](https://vitejs.dev) 8 + [@tanstack/react-start](https://tanstack.com/start)                                                                |
+| **Server Runtime**       | [Nitro](https://nitro.build)                                                                                                                      |
+| **Validation**           | [Zod](https://zod.dev)                                                                                                                            |
+| **Icons**                | [Lucide React](https://lucide.dev)                                                                                                                |
+| **Toasts**               | [Sonner](https://sonner.emilkowal.ski)                                                                                                            |
+| **Charts**               | [Recharts](https://recharts.org)                                                                                                                  |
+| **Linting / Formatting** | [ESLint](https://eslint.org) + [Prettier](https://prettier.io)                                                                                    |
+| **Type Safety**          | [TypeScript](https://www.typescriptlang.org) 5.x                                                                                                  |
 
 ---
 
@@ -130,6 +130,7 @@ OPENAI_API_KEY=sk-<your-openai-api-key>
 ```
 
 > **Note:**
+>
 > - `SUPABASE_URL` and `VITE_SUPABASE_URL` should be identical. The `VITE_` prefix exposes the variable to client components, while the unprefixed variable is used by server functions and API routes.
 > - When deploying to **Cloudflare Pages**, add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `OPENAI_API_KEY` under **Settings -> Environment variables**.
 
@@ -217,12 +218,13 @@ On first sign-in, you will see the **"Name your workspace"** screen.
    - ZIP archives are extracted automatically
 
 > **Ready-to-Use Test Skills:** The repository includes sample `SKILL.md` files in the [`samples/`](./samples) directory for testing every threat level:
+>
 > - [Clean Git Assistant (`samples/clean-git-assistant/SKILL.md`)](./samples/clean-git-assistant/SKILL.md) — Safe instructions and complete metadata (Expected verdict: **clean**, score: 0/100).
 > - [Suspicious Log Parser (`samples/suspicious-log-parser/SKILL.md`)](./samples/suspicious-log-parser/SKILL.md) — External telemetry and unpinned packages (Expected verdict: **suspicious**, score: 25–40/100).
 > - [Malicious Prompt Override (`samples/malicious-prompt-override/SKILL.md`)](./samples/malicious-prompt-override/SKILL.md) — Hidden HTML comment directives and instruction override (Expected verdict: **malicious**, score: 80+/100).
 > - [Critical Credential Harvester (`samples/critical-credential-harvester/SKILL.md`)](./samples/critical-credential-harvester/SKILL.md) — Key theft, covert DNS beacons, and `eval()` execution (Expected verdict: **malicious / auto-blocked & quarantined**, score: 90+/100).
 > - [Supply Chain Obfuscation (`samples/supply-chain-obfuscated/SKILL.md`)](./samples/supply-chain-obfuscated/SKILL.md) — Base64 payload decoding and dormant time-bombs (Expected verdict: **malicious**, score: 85+/100).
-> 
+>
 > See the [Sample Skills Catalog (`samples/README.md`)](./samples/README.md) for full testing instructions.
 
 3. Watch the **Live analysis** panel appear below the summary cards:
@@ -285,7 +287,7 @@ For each finding in Scan Detail:
    - Fill in: Code (e.g., `OPS-001`), Title, Severity, Category, Regex Pattern, Why it matters, How to fix it
    - The pattern field validates the regex live — an error message appears if the regex is invalid
    - Toggle the switch to enable/disable a check on future scans; click the trash icon to delete
-   
+
    **Built-in Checks:**
    - All 35 deterministic rules are listed; click any row to expand and see: category, confidence %, rationale, remediation, and the exact regex pattern
    - Use the search box to filter by rule ID, title, or rationale text

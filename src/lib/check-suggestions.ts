@@ -1,7 +1,16 @@
 import type { Layer, Severity } from "./scanner/rules";
 
 const allowedSeverities = new Set<Severity>(["critical", "high", "medium", "low"]);
-const allowedLayers = new Set<Layer>(["prompt", "agency", "leakage", "privacy", "supply-chain", "integrity", "bias", "resilience"]);
+const allowedLayers = new Set<Layer>([
+  "prompt",
+  "agency",
+  "leakage",
+  "privacy",
+  "supply-chain",
+  "integrity",
+  "bias",
+  "resilience",
+]);
 
 export interface SuggestedCheck {
   code: string;
@@ -28,7 +37,10 @@ Rules:
 Reply with a single JSON object inside a \`\`\`json fence and nothing else:
 {"checks":[{"code":"3-20 chars, letters/numbers/dashes, e.g. AI-001","title":"short check name","severity":"critical|high|medium|low","layer":"prompt|agency|leakage|privacy|supply-chain|integrity|bias|resilience","pattern":"regex source without slashes","rationale":"why this matters, one or two plain sentences","remediation":"how a skill author fixes it","confidence":0-100,"evidence":"exact excerpt from the artifacts that this pattern matches"}]}`;
 
-export function suggestUserPrompt(existing: string[], artifacts: { name: string; content: string }[]) {
+export function suggestUserPrompt(
+  existing: string[],
+  artifacts: { name: string; content: string }[],
+) {
   const body = artifacts
     .map((artifact) => `=== ARTIFACT: ${artifact.name} ===\n${artifact.content}`)
     .join("\n\n");
@@ -49,7 +61,8 @@ function safePattern(value: unknown): string | null {
 }
 
 export function normalizeSuggestions(value: unknown): SuggestedCheck[] {
-  if (!value || typeof value !== "object" || !("checks" in value) || !Array.isArray(value.checks)) return [];
+  if (!value || typeof value !== "object" || !("checks" in value) || !Array.isArray(value.checks))
+    return [];
   return value.checks.slice(0, 6).flatMap((item, index): SuggestedCheck[] => {
     if (!item || typeof item !== "object") return [];
     const record = item as Record<string, unknown>;
@@ -60,22 +73,38 @@ export function normalizeSuggestions(value: unknown): SuggestedCheck[] {
     if (!pattern || title.length < 3) return [];
     if (typeof severity !== "string" || !allowedSeverities.has(severity as Severity)) return [];
     if (typeof layer !== "string" || !allowedLayers.has(layer as Layer)) return [];
-    const rawCode = typeof record["code"] === "string" ? record["code"].toUpperCase().replace(/[^A-Z0-9-]/g, "") : "";
-    const code = rawCode.length >= 3 && rawCode.length <= 20 ? rawCode : `AI-${String(index + 1).padStart(3, "0")}`;
+    const rawCode =
+      typeof record["code"] === "string"
+        ? record["code"].toUpperCase().replace(/[^A-Z0-9-]/g, "")
+        : "";
+    const code =
+      rawCode.length >= 3 && rawCode.length <= 20
+        ? rawCode
+        : `AI-${String(index + 1).padStart(3, "0")}`;
     const confidenceValue = record["confidence"];
-    const confidence = typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
-      ? Math.max(10, Math.min(95, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)))
-      : 65;
-    return [{
-      code,
-      title,
-      severity: severity as Severity,
-      layer: layer as Layer,
-      pattern,
-      rationale: typeof record["rationale"] === "string" ? record["rationale"].slice(0, 500) : "",
-      remediation: typeof record["remediation"] === "string" ? record["remediation"].slice(0, 500) : "",
-      confidence,
-      evidence: typeof record["evidence"] === "string" ? record["evidence"].replace(/\s+/g, " ").trim().slice(0, 220) : "",
-    }];
+    const confidence =
+      typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
+        ? Math.max(
+            10,
+            Math.min(95, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)),
+          )
+        : 65;
+    return [
+      {
+        code,
+        title,
+        severity: severity as Severity,
+        layer: layer as Layer,
+        pattern,
+        rationale: typeof record["rationale"] === "string" ? record["rationale"].slice(0, 500) : "",
+        remediation:
+          typeof record["remediation"] === "string" ? record["remediation"].slice(0, 500) : "",
+        confidence,
+        evidence:
+          typeof record["evidence"] === "string"
+            ? record["evidence"].replace(/\s+/g, " ").trim().slice(0, 220)
+            : "",
+      },
+    ];
   });
 }

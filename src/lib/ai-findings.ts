@@ -2,14 +2,25 @@ import type { Finding } from "./scanner/engine";
 import type { Layer, Severity } from "./scanner/rules";
 
 const allowedSeverities = new Set<Severity>(["critical", "high", "medium", "low"]);
-const allowedLayers = new Set<Layer>(["prompt", "agency", "leakage", "privacy", "supply-chain", "integrity", "bias", "resilience"]);
+const allowedLayers = new Set<Layer>([
+  "prompt",
+  "agency",
+  "leakage",
+  "privacy",
+  "supply-chain",
+  "integrity",
+  "bias",
+  "resilience",
+]);
 
 export function extractJson(text: string): unknown {
   try {
     const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1];
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
-    const candidate = fenced ?? (firstBrace !== -1 && lastBrace > firstBrace ? text.slice(firstBrace, lastBrace + 1) : "{}");
+    const candidate =
+      fenced ??
+      (firstBrace !== -1 && lastBrace > firstBrace ? text.slice(firstBrace, lastBrace + 1) : "{}");
     return JSON.parse(candidate);
   } catch {
     return {};
@@ -17,7 +28,13 @@ export function extractJson(text: string): unknown {
 }
 
 export function normalizeFindings(value: unknown): Finding[] {
-  if (!value || typeof value !== "object" || !("findings" in value) || !Array.isArray(value.findings)) return [];
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("findings" in value) ||
+    !Array.isArray(value.findings)
+  )
+    return [];
   return value.findings.slice(0, 30).flatMap((item, index) => {
     if (!item || typeof item !== "object") return [];
     const record = item as Record<string, unknown>;
@@ -25,31 +42,53 @@ export function normalizeFindings(value: unknown): Finding[] {
     const layerValue = record["layer"];
     const titleValue = record["title"];
     const evidenceValue = record["evidence"];
-    const severity = typeof severityValue === "string" && allowedSeverities.has(severityValue as Severity) ? severityValue as Severity : null;
-    const layer = typeof layerValue === "string" && allowedLayers.has(layerValue as Layer) ? layerValue as Layer : null;
-    if (!severity || !layer || typeof titleValue !== "string" || typeof evidenceValue !== "string") return [];
+    const severity =
+      typeof severityValue === "string" && allowedSeverities.has(severityValue as Severity)
+        ? (severityValue as Severity)
+        : null;
+    const layer =
+      typeof layerValue === "string" && allowedLayers.has(layerValue as Layer)
+        ? (layerValue as Layer)
+        : null;
+    if (!severity || !layer || typeof titleValue !== "string" || typeof evidenceValue !== "string")
+      return [];
     const fileValue = record["file"];
     const lineValue = record["line"];
     const file = typeof fileValue === "string" ? fileValue.slice(0, 500) : "SKILL.md";
-    const line = typeof lineValue === "number" && Number.isFinite(lineValue) ? Math.max(1, Math.round(lineValue)) : 1;
+    const line =
+      typeof lineValue === "number" && Number.isFinite(lineValue)
+        ? Math.max(1, Math.round(lineValue))
+        : 1;
     const confidenceValue = record["confidence"];
-    const confidence = typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
-      ? Math.max(10, Math.min(95, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)))
-      : 70;
-    return [{
-      key: `GPT-${String(index + 1).padStart(3, "0")}:${file}:${line}`,
-      ruleId: `GPT-${String(index + 1).padStart(3, "0")}`,
-      title: titleValue.slice(0, 200),
-      severity,
-      layer,
-      rationale: typeof record["rationale"] === "string" ? record["rationale"].slice(0, 800) : "The instruction creates an unsafe or deceptive behavior pattern.",
-      remediation: typeof record["remediation"] === "string" ? record["remediation"].slice(0, 800) : "Remove or strictly constrain this behavior before deployment.",
-      file,
-      line,
-      evidence: evidenceValue.replace(/\s+/g, " ").trim().slice(0, 220),
-      confidence,
-      source: "ai" as const,
-    }];
+    const confidence =
+      typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
+        ? Math.max(
+            10,
+            Math.min(95, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)),
+          )
+        : 70;
+    return [
+      {
+        key: `GPT-${String(index + 1).padStart(3, "0")}:${file}:${line}`,
+        ruleId: `GPT-${String(index + 1).padStart(3, "0")}`,
+        title: titleValue.slice(0, 200),
+        severity,
+        layer,
+        rationale:
+          typeof record["rationale"] === "string"
+            ? record["rationale"].slice(0, 800)
+            : "The instruction creates an unsafe or deceptive behavior pattern.",
+        remediation:
+          typeof record["remediation"] === "string"
+            ? record["remediation"].slice(0, 800)
+            : "Remove or strictly constrain this behavior before deployment.",
+        file,
+        line,
+        evidence: evidenceValue.replace(/\s+/g, " ").trim().slice(0, 220),
+        confidence,
+        source: "ai" as const,
+      },
+    ];
   });
 }
 
@@ -67,12 +106,19 @@ export function normalizeRecommendation(value: unknown): AiRecommendation | null
   const action = record["action"];
   if (action !== "quarantine" && action !== "allow") return null;
   const confidenceValue = record["confidence"];
-  const confidence = typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
-    ? Math.max(0, Math.min(100, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)))
-    : 70;
+  const confidence =
+    typeof confidenceValue === "number" && Number.isFinite(confidenceValue)
+      ? Math.max(
+          0,
+          Math.min(100, Math.round(confidenceValue > 1 ? confidenceValue : confidenceValue * 100)),
+        )
+      : 70;
   return {
     action,
-    reason: typeof record["reason"] === "string" ? record["reason"].replace(/\s+/g, " ").trim().slice(0, 600) : "",
+    reason:
+      typeof record["reason"] === "string"
+        ? record["reason"].replace(/\s+/g, " ").trim().slice(0, 600)
+        : "",
     confidence,
   };
 }
@@ -92,8 +138,11 @@ confidence is your calibrated certainty. If there are no additional findings, re
 
 Be conservative and evidence-bound. Never invent a finding. Report only behavior supported by an exact excerpt. Do not duplicate the supplied deterministic findings.`;
 
-
-export function aiUserPrompt(artifactName: string, deterministicFindings: unknown, content: string) {
+export function aiUserPrompt(
+  artifactName: string,
+  deterministicFindings: unknown,
+  content: string,
+) {
   return `Artifact: ${artifactName}\n\nAlready detected (do not duplicate):\n${JSON.stringify(deterministicFindings)}\n\nArtifact contents:\n${content}`;
 }
 

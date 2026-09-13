@@ -176,6 +176,7 @@ flowchart TB
 **Files:** `src/routes/api/ai-scan.ts`, `src/lib/ai-findings.ts`, `src/lib/ai-scan-stream.ts`
 
 **Role:** Acts as a senior AI skill security analyst. It receives the full artifact content and the list of already-detected deterministic findings, then performs a deep semantic review to surface threats that pattern matching cannot catch:
+
 - Multi-step prompt injection chains where individual instructions appear harmless in isolation
 - Hidden conditional triggers and dormant backdoors (date/time/keyword activated)
 - Covert data exfiltration (DNS beacons, rendered image URL parameters)
@@ -184,6 +185,7 @@ flowchart TB
 - Cross-context contamination, hallucination inducement, discrimination, and bias
 
 **Model Configuration:**
+
 ```
 model: openai/gpt-6-astra
 reasoningEffort: "high"
@@ -195,6 +197,7 @@ maxRetries: 2
 ```
 
 **Two-Section Output Format:**
+
 1. **Reading Log (Section 1, streamed live):** Plain prose, one line per thing read, format: `[file:line] "short exact excerpt" → analysis`. Each line describes what the model saw and whether it raised concern. This section ends with a one-line overall judgment.
 2. **JSON Findings Block (Section 2, emitted on completion):** Enclosed in a ` ```json ``` ` fence. Contains a `recommendation` (quarantine/allow, reason, confidence) and a `findings` array.
 
@@ -211,6 +214,7 @@ maxRetries: 2
 **Role:** Acts as a detection engineer. Given skill artifact content and the full list of existing check codes/titles (both 35 built-in rules and all custom checks for the organization), it proposes new deterministic regex-based detection rules grounded in actual patterns found in the uploaded artifacts.
 
 **System Prompt Constraints:**
+
 - Every proposal must be grounded in an exact excerpt from the supplied artifacts
 - Must not restate any existing check
 - Patterns must be valid JavaScript regexes (no lookbehind, no backreferences, max 300 chars)
@@ -218,6 +222,7 @@ maxRetries: 2
 - If no gaps exist, return an empty list
 
 **Output Normalization (`normalizeSuggestions`):**
+
 - Validates pattern with `new RegExp(pattern, "i")`
 - Rejects patterns with lookbehind (`(?<`) or backreferences (`\1`)
 - Clamps confidence to 10–95%
@@ -237,6 +242,7 @@ maxRetries: 2
 The `AuthPanel` component provides authentication using native Supabase Auth:
 
 **Email/Password Flow:**
+
 - Toggle between **Sign in** and **Create account** modes via a bottom switch link
 - Uses `supabase.auth.signInWithPassword({ email, password })` for immediate sign-in
 - Uses `supabase.auth.signUp({ email, password, options: { emailRedirectTo: .../dashboard } })` for account creation
@@ -245,6 +251,7 @@ The `AuthPanel` component provides authentication using native Supabase Auth:
 - `autoComplete` attributes are configured per mode (`current-password` / `new-password`)
 
 **Session Protection:**
+
 - `WorkspaceDashboard` calls `supabase.auth.getSession()` on mount; unauthenticated users are immediately redirected to `/login`
 - Sign-out calls `supabase.auth.signOut()` and navigates to the landing page (`/`)
 
@@ -263,11 +270,11 @@ On first login, if the user has no organization membership, the dashboard shows 
 
 **Roles (`organization_role` enum):**
 
-| Role | Scan | Review Findings | Manage Custom Checks | Approve Queue | Change Policy |
-|---|---|---|---|---|---|
-| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ (save) |
-| `analyst` | ✅ | ✅ | ✅ | ✅ | ✅ (preview only) |
-| `viewer` | ✅ (read-only) | ❌ | ❌ | ❌ | ✅ (preview only) |
+| Role      | Scan           | Review Findings | Manage Custom Checks | Approve Queue | Change Policy     |
+| --------- | -------------- | --------------- | -------------------- | ------------- | ----------------- |
+| `admin`   | ✅             | ✅              | ✅                   | ✅            | ✅ (save)         |
+| `analyst` | ✅             | ✅              | ✅                   | ✅            | ✅ (preview only) |
+| `viewer`  | ✅ (read-only) | ❌              | ❌                   | ❌            | ✅ (preview only) |
 
 The `canEdit` UI flag is `role === "admin" || role === "analyst"`. The `canSave` flag (for policy) is `role === "admin"`. Server functions enforce authorization at the database level via Supabase Row-Level Security in addition to the middleware token validation.
 
@@ -284,6 +291,7 @@ The `canEdit` UI flag is `role === "admin" || role === "analyst"`. The `canSave`
 **ZIP expansion:** `.zip` files are detected by filename and expanded with `JSZip.loadAsync`. Directories are filtered out. Each entry is decoded individually. A running byte counter prevents the uncompressed content from exceeding 20 MB.
 
 **Binary detection (two-stage):**
+
 1. Extension allowlist check: files ending in `.exe`, `.dll`, `.so`, `.dylib`, `.bin`, `.jar`, `.pyc`, `.wasm`, `.scpt`, `.app`, `.msi`, `.deb`, `.rpm`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.pdf`, `.zip`, `.gz`, `.tar`, `.mp4`, `.mp3`, `.woff2?`, `.ttf`, `.otf` → stored as `{ text: null }`
 2. Null-byte sampling: the first 4096 bytes of any non-excluded file are scanned for a null byte (`b === 0`) → `{ text: null }` if found
 
@@ -292,11 +300,13 @@ Binary files are counted in `files_count` and their sizes contribute to `totalBy
 **Encoding:** All text files are decoded with `new TextDecoder("utf-8", { fatal: false })` to handle partial or mixed encodings gracefully.
 
 **Artifact naming:**
+
 - Single file upload → artifact name is the filename
 - Multiple files → the common root path prefix (first segment of `webkitRelativePath`, or `"N files"` if paths differ)
 - `webkitRelativePath` is used when available (folder uploads via file picker)
 
 **Error conditions:**
+
 - `"No files were provided."` — empty `FileList`
 - `"Artifact exceeds the 20 MB limit."` — total size before or after ZIP extraction
 - `"No readable text files found in this artifact."` — all files decoded as binary
@@ -357,45 +367,46 @@ All rules are declared using the `r()` helper which produces typed `Rule` object
 
 **Complete Rule Catalog:**
 
-| ID | Layer | Sev | Title |
-|---|---|---|---|
-| ATT-001 | Prompt integrity | Critical | Hidden instruction directive |
-| ATT-002 | Prompt integrity | Critical | System or operator instruction override |
-| ATT-003 | Prompt integrity | Critical | Delegated remote instruction loading |
-| ATT-004 | Prompt integrity | High | Instruction payload disguised as an example |
-| ATT-005 | Prompt integrity | High | Dormant conditional trigger |
-| ATT-006 | Prompt integrity | High | Cross-skill instruction tampering |
-| ATT-007 | Agency & tools | Critical | Unscoped command execution |
-| ATT-008 | Agency & tools | Critical | Destructive operation |
-| ATT-009 | Agency & tools | High | Autonomous network egress |
-| ATT-010 | Agency & tools | Critical | Privilege escalation |
-| ATT-011 | Resilience | Medium | Unbounded loop or recursive invocation |
-| ATT-012 | Agency & tools | Critical | Human approval bypass |
-| ATT-013 | Agency & tools | High | Cross-boundary file access |
-| ATT-014 | Data leakage | Critical | Covert exfiltration channel |
-| ATT-015 | Data leakage | Critical | Credential or secret harvesting |
-| ATT-016 | Data leakage | High | Conversation or context telemetry |
-| ATT-017 | Privacy | High | Cross-session data reuse |
-| ATT-018 | Data leakage | Medium | Broad sensitive file discovery |
-| ATT-019 | Privacy | High | Excessive personal or health data collection |
-| ATT-020 | Privacy | Medium | Personal data processing without retention limits |
-| ATT-021 | Privacy | High | Re-identification of anonymized data |
-| ATT-022 | Privacy | High | Third-party personal data sharing without consent |
-| ATT-023 | Supply chain | Critical | Unpinned remote dependency |
-| ATT-024 | Supply chain | High | Lookalike package reference |
-| ATT-025 | Supply chain | Critical | Self-modifying skill or agent configuration |
-| ATT-026 | Supply chain | Critical | Obfuscated payload decoding |
-| ATT-027 | Supply chain | Medium | Unverifiable artifact provenance _(structural)_ |
-| ATT-028 | Supply chain | High | Time-bomb or dormant backdoor |
-| ATT-029 | Output integrity | Medium | Unsourced authoritative claims |
-| ATT-030 | Output integrity | High | High-stakes advice without verification |
-| ATT-031 | Output integrity | Medium | Fabricated tool or source instruction |
-| ATT-032 | Bias & fairness | Medium | Demographic stereotype in output guidance |
-| ATT-033 | Bias & fairness | High | Protected-attribute decision rule |
-| ATT-034 | Resilience | Medium | Unbounded context amplification |
-| ATT-035 | Prompt integrity | Critical | Guardrail-bypass framing |
+| ID      | Layer            | Sev      | Title                                             |
+| ------- | ---------------- | -------- | ------------------------------------------------- |
+| ATT-001 | Prompt integrity | Critical | Hidden instruction directive                      |
+| ATT-002 | Prompt integrity | Critical | System or operator instruction override           |
+| ATT-003 | Prompt integrity | Critical | Delegated remote instruction loading              |
+| ATT-004 | Prompt integrity | High     | Instruction payload disguised as an example       |
+| ATT-005 | Prompt integrity | High     | Dormant conditional trigger                       |
+| ATT-006 | Prompt integrity | High     | Cross-skill instruction tampering                 |
+| ATT-007 | Agency & tools   | Critical | Unscoped command execution                        |
+| ATT-008 | Agency & tools   | Critical | Destructive operation                             |
+| ATT-009 | Agency & tools   | High     | Autonomous network egress                         |
+| ATT-010 | Agency & tools   | Critical | Privilege escalation                              |
+| ATT-011 | Resilience       | Medium   | Unbounded loop or recursive invocation            |
+| ATT-012 | Agency & tools   | Critical | Human approval bypass                             |
+| ATT-013 | Agency & tools   | High     | Cross-boundary file access                        |
+| ATT-014 | Data leakage     | Critical | Covert exfiltration channel                       |
+| ATT-015 | Data leakage     | Critical | Credential or secret harvesting                   |
+| ATT-016 | Data leakage     | High     | Conversation or context telemetry                 |
+| ATT-017 | Privacy          | High     | Cross-session data reuse                          |
+| ATT-018 | Data leakage     | Medium   | Broad sensitive file discovery                    |
+| ATT-019 | Privacy          | High     | Excessive personal or health data collection      |
+| ATT-020 | Privacy          | Medium   | Personal data processing without retention limits |
+| ATT-021 | Privacy          | High     | Re-identification of anonymized data              |
+| ATT-022 | Privacy          | High     | Third-party personal data sharing without consent |
+| ATT-023 | Supply chain     | Critical | Unpinned remote dependency                        |
+| ATT-024 | Supply chain     | High     | Lookalike package reference                       |
+| ATT-025 | Supply chain     | Critical | Self-modifying skill or agent configuration       |
+| ATT-026 | Supply chain     | Critical | Obfuscated payload decoding                       |
+| ATT-027 | Supply chain     | Medium   | Unverifiable artifact provenance _(structural)_   |
+| ATT-028 | Supply chain     | High     | Time-bomb or dormant backdoor                     |
+| ATT-029 | Output integrity | Medium   | Unsourced authoritative claims                    |
+| ATT-030 | Output integrity | High     | High-stakes advice without verification           |
+| ATT-031 | Output integrity | Medium   | Fabricated tool or source instruction             |
+| ATT-032 | Bias & fairness  | Medium   | Demographic stereotype in output guidance         |
+| ATT-033 | Bias & fairness  | High     | Protected-attribute decision rule                 |
+| ATT-034 | Resilience       | Medium   | Unbounded context amplification                   |
+| ATT-035 | Prompt integrity | Critical | Guardrail-bypass framing                          |
 
 **Layer Distribution:**
+
 - Prompt integrity: 7 rules (ATT-001–006, ATT-035)
 - Agency & tools: 6 rules (ATT-007–010, ATT-012–013)
 - Data leakage: 4 rules (ATT-014–016, ATT-018)
@@ -417,32 +428,33 @@ Confidence answers "how sure are we this match is what the check is looking for?
 
 **Base confidence by severity:**
 
-| Severity | Base Confidence |
-|---|---|
-| `critical` | 88% |
-| `high` | 78% |
-| `medium` | 68% |
-| `low` | 58% |
+| Severity   | Base Confidence |
+| ---------- | --------------- |
+| `critical` | 88%             |
+| `high`     | 78%             |
+| `medium`   | 68%             |
+| `low`      | 58%             |
 
 **Confidence overrides** (rules whose patterns are intentionally broad or narrow):
 
-| Rule | Override | Reason |
-|---|---|---|
-| ATT-004 | 62% | "copy exactly / follow these instructions" in examples — can be legitimate |
-| ATT-005 | 60% | Conditional triggers span many innocent patterns |
-| ATT-013 | 45% | Path traversal regex catches many legitimate usages |
-| ATT-015 | 55% | Credential file names appear in documentation too |
-| ATT-018 | 55% | Broad file discovery commands are common in dev scripts |
-| ATT-020 | 48% | Personal data retention language is very broad |
-| ATT-023 | 60% | Package install commands are common in setup scripts |
-| ATT-026 | 58% | Long base64 strings appear in legitimate config |
-| ATT-027 | 92% | Structural check — missing author/license is unambiguous |
-| ATT-029 | 60% | "Always state X without sources" can be legitimate |
-| ATT-031 | 62% | "Fabricate citation" may appear in negative examples |
-| ATT-032 | 50% | Demographic language is very broad |
-| ATT-034 | 52% | "Read all files" is common in legitimate tools |
+| Rule    | Override | Reason                                                                     |
+| ------- | -------- | -------------------------------------------------------------------------- |
+| ATT-004 | 62%      | "copy exactly / follow these instructions" in examples — can be legitimate |
+| ATT-005 | 60%      | Conditional triggers span many innocent patterns                           |
+| ATT-013 | 45%      | Path traversal regex catches many legitimate usages                        |
+| ATT-015 | 55%      | Credential file names appear in documentation too                          |
+| ATT-018 | 55%      | Broad file discovery commands are common in dev scripts                    |
+| ATT-020 | 48%      | Personal data retention language is very broad                             |
+| ATT-023 | 60%      | Package install commands are common in setup scripts                       |
+| ATT-026 | 58%      | Long base64 strings appear in legitimate config                            |
+| ATT-027 | 92%      | Structural check — missing author/license is unambiguous                   |
+| ATT-029 | 60%      | "Always state X without sources" can be legitimate                         |
+| ATT-031 | 62%      | "Fabricate citation" may appear in negative examples                       |
+| ATT-032 | 50%      | Demographic language is very broad                                         |
+| ATT-034 | 52%      | "Read all files" is common in legitimate tools                             |
 
 **Confidence labels** (shown in UI):
+
 - ≥ 80%: **High precision** — specific signals, low false positive rate
 - 60–79%: **Moderate precision** — worth reviewing but needs context
 - < 60%: **Broad heuristic** — elevated false positive risk, closer human review advised
@@ -460,6 +472,7 @@ Confidence answers "how sure are we this match is what the check is looking for?
 The scoring model is fully deterministic and reproducible. It operates in five stages:
 
 **Input normalization (`normalizePolicy`):**
+
 ```
 acceptableScore = clamp(1, 98, policy.acceptableScore)
 maliciousScore  = max(acceptableScore + 1, clamp(1, 100, policy.maliciousScore))
@@ -467,26 +480,30 @@ maliciousScore  = max(acceptableScore + 1, clamp(1, 100, policy.maliciousScore))
 
 **Stage 1 — Severity contribution with diminishing returns:**
 For each severity level (critical, high, medium, low), in that order:
+
 ```
 contribution = Σ(i=0 to count-1)  weight(severity) / (1 + 0.55 × i)
 ```
+
 This means a second critical finding contributes `40 / 1.55 ≈ 25.8` rather than 40, a third `40 / 2.10 ≈ 19.0`, and so on. This prevents a single rule type from dominating the score when it fires multiple times.
 
 **Severity weights:**
 
-| Severity | Weight |
-|---|---|
-| `critical` | 40 |
-| `high` | 18 |
-| `medium` | 7 |
-| `low` | 2 |
+| Severity   | Weight |
+| ---------- | ------ |
+| `critical` | 40     |
+| `high`     | 18     |
+| `medium`   | 7      |
+| `low`      | 2      |
 
 **Stage 2 — Raw score (inherent score):**
+
 ```
 rawScore = min(100, round(Σ contributions across all severities))
 ```
 
 **Stage 3 — Threshold-relative mapped score:**
+
 ```
 if rawScore ≤ acceptableScore:
     score = round( (rawScore / acceptableScore) × 17 )           → 0–17 (clean band)
@@ -495,9 +512,11 @@ elif rawScore < maliciousScore:
 else:
     score = round( 55 + ((rawScore - malicious) / max(1, 100 - malicious)) × 45 )    → 55–100 (block band)
 ```
+
 This normalization ensures that a score of 18 always means "just at the review boundary" regardless of the organization's specific threshold settings. Threshold changes visually shift where scans fall on the scale.
 
 **Stage 4 — Verdict:**
+
 ```
 if (blockOnCritical AND counts.critical > 0) OR rawScore ≥ maliciousScore:
     verdict = "malicious"
@@ -527,6 +546,7 @@ A self-contained panel rendered in the Scan Detail view that explains the scorin
 5. **Verdict rule** — whether `blockOnCritical` is active
 
 When called with optional `breakdown`, `rawScore`, and `score` props, it also renders a per-scan **Score Breakdown** table showing:
+
 - `N × severity @ weight → +contribution` for each severity level
 - `inherent (capped): rawScore`
 - `after your thresholds: finalScore/100`
@@ -558,6 +578,7 @@ The POST handler performs in sequence:
 #### Client SSE Consumer (`ai-scan-stream.ts`)
 
 `streamAiScan(payload, onReasoning)`:
+
 1. Retrieves the current Supabase session access token; throws `"Your session expired"` if missing
 2. `fetch`es `/api/ai-scan` with `Content-Type: application/json` and `Authorization: Bearer <token>`
 3. Reads the `ReadableStream` body chunk by chunk using a `TextDecoder` with `{ stream: true }` for chunked UTF-8
@@ -576,6 +597,7 @@ The `ThinkingLog` component renders a real-time progress panel during scanning. 
 
 **Step list (ordered):**  
 Each step is a `{ label: string; done: boolean }`. Steps progress through:
+
 1. `"Reading the skill files"` (loading) → `"Read N file(s): path1, path2"` (done)
 2. `"Running N deterministic checks"` → `"Deterministic checks complete · M finding(s)"` (done)
 3. `"GPT reviewing intent, combinations and evasion"` → `"GPT review complete · K additional finding(s)"` (done)
@@ -619,6 +641,7 @@ The Checks tab's top panel. Admins/analysts upload skills; the AI suggestion age
 
 **Section 2 — Your Checks (manual):**
 Lists all custom checks for the organization. The **+ New check** button expands an inline form with:
+
 - **Code:** 3–20 chars, letters/numbers/dashes (stored uppercase); unique per org (DB constraint)
 - **Title:** 3–120 chars
 - **Severity:** select: critical / high / medium / low
@@ -661,17 +684,20 @@ The `skill_scans` list is fetched most-recent-first with a limit of 100 records 
 The History tab renders the complete scan audit trail with rich interaction:
 
 **Row display:** Each scan row shows a checkbox (for selection), the skill name (declared or artifact), scan timestamp, finding count, file count, verdict badge (color-coded), risk score (mono font), and a delete button. Inline status chips appear for:
+
 - `Bot icon + "Awaiting your approval"` — when the AI recommended quarantine and no human has decided yet
 - `ShieldBan + "Auto-blocked · critical"` — policy auto-block due to critical finding
 - `"Quarantined"` — manual quarantine by analyst
 - `"Cleared"` — manually cleared for deployment
 
 **Multi-select:** Checkboxes allow selecting any number of scans. When items are selected, a toolbar appears above the list:
+
 - **Compare** button — enabled only when exactly 2 scans are selected
 - **Delete all** button (admin/analyst only) — deletes all selected scans serially, with a window.confirm dialog listing the count
 - **Clear** — deselects all
 
 **Side-by-side comparison panel:** When exactly 2 scans are selected and Compare is clicked, a structured grid appears above the list showing:
+
 - Row-by-row comparison: Skill name, Scanned timestamp, Verdict, Findings count (with color-coded delta), Critical count (delta), High count (delta), Medium count, Files count, Containment, AI call
 - Risk Score row rendered in large monospace type (verdict-colored) with a `Delta` badge showing the numeric difference (green = improved, red = worsened)
 
@@ -688,12 +714,14 @@ The History tab renders the complete scan audit trail with rich interaction:
 `ScanDetail` is the primary triage interface, appearing when a scan row is clicked in the History tab.
 
 **Finding groups (4 tabs-within-panel):**
+
 1. **Needs review** — `status: "open"` — newly flagged, requires analyst attention
 2. **Pending analyst approval** — `status: "pending_confirm"` — escalated by a reviewer, waiting for senior sign-off
 3. **Real risks** — `status: "confirmed"` — confirmed as genuine threats, counted in score
 4. **False positives** — `status: "false_positive"` — dismissed; shown dimmed (`opacity-55`), excluded from score
 
 **Each finding card shows:**
+
 - Rule ID (mono), title, severity, confidence % + label, and a `ConfidenceHint` tooltip button
 - File path and line number (mono)
 - Evidence box labeled "Found in the skill — not advice" (prevents confusion between evidence and AI-generated advice)
@@ -702,12 +730,14 @@ The History tab renders the complete scan audit trail with rich interaction:
 - For `false_positive`: the stored `review_note` if present
 
 **Review action buttons (admin/analyst only):**
+
 - **Real risk:** Transitions `open` → `pending_confirm` (escalates for approval) or toggles `confirmed` ↔ `open`
 - **False positive:** Opens an inline textarea requiring a reason (minimum 15 characters; enforced by disabled Save button with character count display). On submit: `status: "false_positive"` + `review_note` stored
 - **Revert:** `pending_confirm` → `open`
 
 **Post-review re-scoring (`reviewFinding` server function):**
 After every status change:
+
 1. Updates `scan_findings.status` + `reviewed_by` + `reviewed_at` + `review_note`
 2. Re-fetches all findings for the scan
 3. Filters to `active` (all except false_positive)
@@ -733,16 +763,19 @@ The Review Queue tab presents two categories of items requiring human sign-off:
 
 **AI Containment Recommendations:**
 Skills where the GPT agent returned `action: "quarantine"` and no human has yet decided. Each card shows:
+
 - Skill name (declared or artifact), score, verdict, scan timestamp
 - `"Awaiting approval"` amber chip with hourglass icon
 - A secondary panel labeled "Analysis log" showing `ai_recommendation_reason` (the AI's full rationale for recommending quarantine) + confidence %
 
 Action buttons (admin/analyst only):
+
 - **Approve quarantine** (destructive/red) → `decideRecommendation({ scanId, decision: "approve" })` → sets `containment: "quarantined"`, `recommendation_status: "approved"`, `recommendation_decided_by`, `recommendation_decided_at`
 - **Reject** (outline) → same function with `decision: "reject"` → `recommendation_status: "rejected"`, `containment: "none"` — skill stays available, decision recorded permanently
 
 **Pending Findings:**
 Findings escalated to `status: "pending_confirm"` by analysts. Each card shows:
+
 - Rule ID + category header, finding title
 - Skill name + `file:line` reference
 - Severity (colored), confidence % + label + `ConfidenceHint` tooltip
@@ -750,6 +783,7 @@ Findings escalated to `status: "pending_confirm"` by analysts. Each card shows:
 - If available: AI reading of this specific finding from `ai_recommendation_reason`
 
 Action buttons (admin/analyst only):
+
 - **Approve** → `reviewFinding({ findingId, scanId, status: "confirmed" })` → triggers re-score; if severe enough, quarantines the skill
 - **Revert** → `reviewFinding({ status: "open" })` → sends finding back to the open/unreviewed state
 
@@ -768,16 +802,19 @@ The Policy tab provides workspace-level risk configuration with live feedback.
 Each parameter label has a `PolicyHint` tooltip (ℹ icon) with detailed guidance:
 
 **Review threshold (`acceptableScore`)** [Slider: 0–98, default 18]:
+
 - Above this raw score a skill becomes "suspicious" — needs human review
 - Recommended 15–20. Lowering to 8–14 catches more (better for regulated data). Raising to 25–35 lets more through as clean (only for trusted authors).
 - Constrained: always < `maliciousScore` (automatically adjusted on slider change)
 
 **Block threshold (`maliciousScore`)** [Slider: 1–100, default 55]:
+
 - At or above this raw score the verdict becomes "malicious" — not fit to deploy
 - Recommended 50–60. Keep ≥ 25 points above the review threshold to maintain a meaningful review band.
 - Constrained: always > `acceptableScore`
 
 **Block critical findings** [Toggle, default on]:
+
 - When on: a single critical match is "malicious" regardless of score
 - Strongly recommended on (covers credential theft, RCE, exfiltration patterns)
 - Turn off only if your team triages every scan manually and prefers score-only judgement
@@ -800,6 +837,7 @@ Saving: the **Save policy** button (admin-only, `canSave: role === "admin"`) cal
 The `Trend` SVG chart is rendered in the Overview tab's "Scores over time" section. It visualizes up to the last 20 scans (oldest-to-newest, most-recent 20 of the 100 loaded).
 
 **Implementation:**
+
 - Pure SVG `polyline` using a `viewBox="0 0 100 100"` with `preserveAspectRatio="none"` to fill the container
 - Grid lines at y = 0, 25, 50, 75, 100 (solid at boundaries, dashed in between)
 - Each data point is an invisible `<button>` absolutely positioned at `(index / (n-1)) × 100%` horizontally and `(100 - score)%` vertically, with a colored inner `<span>` circle
@@ -820,17 +858,18 @@ Containment is the enforcement state of a scanned skill. It is stored in `skill_
 
 **States:**
 
-| State | Meaning | How Set | DB Fields |
-|---|---|---|---|
-| `none` | No containment — default | Initial state on save | `contained_at: null`, `contained_by: null` |
-| `quarantined` | Blocked — not safe to deploy | Auto (critical + blockOnCritical) / analyst confirms severe finding / analyst approves AI recommendation | `contained_at: timestamp`, `contained_by: userId` |
-| `cleared` | Explicitly approved for deployment | All findings dismissed as false positives / verdict becomes "clean" after re-scoring | `contained_at: timestamp`, `contained_by: userId` |
+| State         | Meaning                            | How Set                                                                                                  | DB Fields                                         |
+| ------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `none`        | No containment — default           | Initial state on save                                                                                    | `contained_at: null`, `contained_by: null`        |
+| `quarantined` | Blocked — not safe to deploy       | Auto (critical + blockOnCritical) / analyst confirms severe finding / analyst approves AI recommendation | `contained_at: timestamp`, `contained_by: userId` |
+| `cleared`     | Explicitly approved for deployment | All findings dismissed as false positives / verdict becomes "clean" after re-scoring                     | `contained_at: timestamp`, `contained_by: userId` |
 
 **Auto-quarantine on save:** When `saveScan` runs and `block_on_critical` is true and `counts.critical > 0`, the scan is immediately saved with `containment: "quarantined"` — no human approval needed. The Scan Detail shows an "Auto-blocked by policy" banner with no action buttons.
 
 **Re-evaluation after finding review:** `reviewFinding` recalculates containment using logic that accounts for: auto-block conditions, whether any `confirmed` finding has severity critical or high, whether all findings are dismissed, and whether the re-computed verdict is "clean".
 
 **UI indicators:**
+
 - Scan Detail: colored banners — red `ShieldBan` (quarantined / auto-blocked), green `ShieldCheck` (cleared)
 - History list: inline chips — red "Auto-blocked · critical", red "Quarantined", green "Cleared"
 - Approval Queue: amber "Awaiting approval" chip for pending AI recommendations
@@ -861,10 +900,12 @@ The `toMarkdown(result: ScanResult)` function generates a structured Markdown se
 **Problem:** Nitro uses the `h3` framework internally. When an unhandled exception occurs inside a TanStack Start SSR handler, h3 catches it and returns a generic `{ "unhandled": true, "message": "HTTPError" }` JSON response with status 500, discarding the original error and its stack trace.
 
 **Solution — `error-capture.ts`:**
+
 - Wraps `console.error` globally: any `Error` object passed to `console.error` is expanded to a full string (with stack trace and cause chain up to 5 levels deep via `describeError`) before serialization, and is also stored in `lastCapturedError` with a 5-second TTL
 - Registers `window.addEventListener("error", ...)` and `window.addEventListener("unhandledrejection", ...)` to capture unhandled promise rejections and uncaught errors
 
 **Solution — `server.ts`:**
+
 - The Nitro server entry wraps every request in a try/catch
 - After receiving a response, `normalizeCatastrophicSsrResponse` checks: if status ≥ 500, content-type is JSON, and the body matches `{ "unhandled": true, "message": "HTTPError" }` → calls `consumeLastCapturedError()` (retrieves the original error within its 5s TTL), logs it via `console.error`, and returns a proper HTML error page instead of the raw JSON body
 - This ensures that production error logs contain actionable stack traces rather than the h3-swallowed generic message
@@ -880,7 +921,7 @@ The `toMarkdown(result: ScanResult)` function generates a structured Markdown se
 ```ts
 createOpenAI({
   apiKey,
-})
+});
 ```
 
 This factory is called per AI request (both scan and suggestion), ensuring each request carries the configured `OPENAI_API_KEY`.
@@ -896,6 +937,7 @@ Both agents use the same model (`openai/gpt-6-astra`), but with different system
 Two specialized tooltip components provide inline contextual help throughout the dashboard:
 
 **`ConfidenceHint`** — An ℹ icon button that opens a Radix UI `Tooltip` explaining the confidence system:
+
 - Distinguishes confidence (precision/false positive rate) from severity (impact)
 - Explains base starting values by severity: critical 88%, high 78%, medium 68%, low 58%
 - Notes that broad-pattern checks are lowered from these starting values
@@ -913,103 +955,110 @@ Both components use Radix UI `TooltipProvider` with `delayDuration={150}ms` for 
 The schema is defined by Supabase migrations in `supabase/migrations/` and reflected as TypeScript types in `src/integrations/supabase/types.ts`.
 
 ### `organizations`
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK, default `gen_random_uuid()` |
-| `name` | text | NOT NULL |
-| `slug` | text | NOT NULL, UNIQUE |
-| `created_at` | timestamptz | NOT NULL, default `now()` |
-| `created_by` | uuid | NOT NULL |
-| `updated_at` | timestamptz | NOT NULL, default `now()` |
+
+| Column       | Type        | Constraints                     |
+| ------------ | ----------- | ------------------------------- |
+| `id`         | uuid        | PK, default `gen_random_uuid()` |
+| `name`       | text        | NOT NULL                        |
+| `slug`       | text        | NOT NULL, UNIQUE                |
+| `created_at` | timestamptz | NOT NULL, default `now()`       |
+| `created_by` | uuid        | NOT NULL                        |
+| `updated_at` | timestamptz | NOT NULL, default `now()`       |
 
 ### `organization_members`
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `organization_id` | uuid | FK → organizations(id) |
-| `user_id` | uuid | FK → auth.users |
-| `role` | organization_role | enum: admin \| analyst \| viewer, default 'viewer' |
-| `created_at` | timestamptz | |
+
+| Column            | Type              | Constraints                                        |
+| ----------------- | ----------------- | -------------------------------------------------- |
+| `id`              | uuid              | PK                                                 |
+| `organization_id` | uuid              | FK → organizations(id)                             |
+| `user_id`         | uuid              | FK → auth.users                                    |
+| `role`            | organization_role | enum: admin \| analyst \| viewer, default 'viewer' |
+| `created_at`      | timestamptz       |                                                    |
 
 **Enum:** `organization_role = "admin" | "analyst" | "viewer"`
 
 ### `risk_settings`
-| Column | Type | Constraints |
-|---|---|---|
-| `organization_id` | uuid | PK, FK → organizations(id), isOneToOne |
-| `acceptable_score` | integer | default 18 |
-| `malicious_score` | integer | default 55 |
-| `block_on_critical` | boolean | default true |
-| `updated_at` | timestamptz | |
-| `updated_by` | uuid | |
+
+| Column              | Type        | Constraints                            |
+| ------------------- | ----------- | -------------------------------------- |
+| `organization_id`   | uuid        | PK, FK → organizations(id), isOneToOne |
+| `acceptable_score`  | integer     | default 18                             |
+| `malicious_score`   | integer     | default 55                             |
+| `block_on_critical` | boolean     | default true                           |
+| `updated_at`        | timestamptz |                                        |
+| `updated_by`        | uuid        |                                        |
 
 ### `skill_scans`
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `organization_id` | uuid | FK → organizations(id) |
-| `scanned_by` | uuid | |
-| `artifact_name` | text | NOT NULL |
-| `declared_name` | text | NULL |
-| `sha256` | char(64) | NOT NULL |
-| `score` | integer | NOT NULL |
-| `verdict` | text | NOT NULL |
-| `findings_count` | integer | |
-| `files_count` | integer | |
-| `rules_evaluated` | integer | |
-| `severity_counts` | jsonb | `{critical, high, medium, low}` |
-| `scanned_at` | timestamptz | NOT NULL |
-| `created_at` | timestamptz | |
-| `containment` | text | default 'none' |
-| `contained_at` | timestamptz | NULL |
-| `contained_by` | uuid | NULL |
-| `ai_recommendation` | text | default 'none' |
-| `ai_recommendation_reason` | text | |
-| `ai_recommendation_confidence` | integer | |
-| `recommendation_status` | text | default 'none' |
-| `recommendation_decided_at` | timestamptz | NULL |
-| `recommendation_decided_by` | uuid | NULL |
+
+| Column                         | Type        | Constraints                     |
+| ------------------------------ | ----------- | ------------------------------- |
+| `id`                           | uuid        | PK                              |
+| `organization_id`              | uuid        | FK → organizations(id)          |
+| `scanned_by`                   | uuid        |                                 |
+| `artifact_name`                | text        | NOT NULL                        |
+| `declared_name`                | text        | NULL                            |
+| `sha256`                       | char(64)    | NOT NULL                        |
+| `score`                        | integer     | NOT NULL                        |
+| `verdict`                      | text        | NOT NULL                        |
+| `findings_count`               | integer     |                                 |
+| `files_count`                  | integer     |                                 |
+| `rules_evaluated`              | integer     |                                 |
+| `severity_counts`              | jsonb       | `{critical, high, medium, low}` |
+| `scanned_at`                   | timestamptz | NOT NULL                        |
+| `created_at`                   | timestamptz |                                 |
+| `containment`                  | text        | default 'none'                  |
+| `contained_at`                 | timestamptz | NULL                            |
+| `contained_by`                 | uuid        | NULL                            |
+| `ai_recommendation`            | text        | default 'none'                  |
+| `ai_recommendation_reason`     | text        |                                 |
+| `ai_recommendation_confidence` | integer     |                                 |
+| `recommendation_status`        | text        | default 'none'                  |
+| `recommendation_decided_at`    | timestamptz | NULL                            |
+| `recommendation_decided_by`    | uuid        | NULL                            |
 
 ### `scan_findings`
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `scan_id` | uuid | FK → skill_scans(id) |
-| `organization_id` | uuid | FK → organizations(id) |
-| `rule_id` | text | e.g., "ATT-001", "GPT-001" |
-| `title` | text | |
-| `severity` | text | critical / high / medium / low |
-| `category` | text | Layer label string |
-| `file_path` | text | |
-| `line_number` | integer | |
-| `evidence` | text | exact excerpt, ≤220 chars |
-| `remediation` | text | |
-| `confidence` | integer | 0–100 |
-| `status` | text | open / pending_confirm / confirmed / false_positive |
-| `reviewed_by` | uuid | NULL |
-| `reviewed_at` | timestamptz | NULL |
-| `review_note` | text | |
-| `created_at` | timestamptz | |
+
+| Column            | Type        | Constraints                                         |
+| ----------------- | ----------- | --------------------------------------------------- |
+| `id`              | uuid        | PK                                                  |
+| `scan_id`         | uuid        | FK → skill_scans(id)                                |
+| `organization_id` | uuid        | FK → organizations(id)                              |
+| `rule_id`         | text        | e.g., "ATT-001", "GPT-001"                          |
+| `title`           | text        |                                                     |
+| `severity`        | text        | critical / high / medium / low                      |
+| `category`        | text        | Layer label string                                  |
+| `file_path`       | text        |                                                     |
+| `line_number`     | integer     |                                                     |
+| `evidence`        | text        | exact excerpt, ≤220 chars                           |
+| `remediation`     | text        |                                                     |
+| `confidence`      | integer     | 0–100                                               |
+| `status`          | text        | open / pending_confirm / confirmed / false_positive |
+| `reviewed_by`     | uuid        | NULL                                                |
+| `reviewed_at`     | timestamptz | NULL                                                |
+| `review_note`     | text        |                                                     |
+| `created_at`      | timestamptz |                                                     |
 
 ### `custom_checks`
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `organization_id` | uuid | FK → organizations(id) |
-| `code` | text | UNIQUE per org |
-| `title` | text | |
-| `severity` | text | |
-| `layer` | text | |
-| `pattern` | text | JS regex string |
-| `rationale` | text | |
-| `remediation` | text | |
-| `confidence` | integer | 0–100 |
-| `enabled` | boolean | default true |
-| `created_by` | uuid | |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+
+| Column            | Type        | Constraints            |
+| ----------------- | ----------- | ---------------------- |
+| `id`              | uuid        | PK                     |
+| `organization_id` | uuid        | FK → organizations(id) |
+| `code`            | text        | UNIQUE per org         |
+| `title`           | text        |                        |
+| `severity`        | text        |                        |
+| `layer`           | text        |                        |
+| `pattern`         | text        | JS regex string        |
+| `rationale`       | text        |                        |
+| `remediation`     | text        |                        |
+| `confidence`      | integer     | 0–100                  |
+| `enabled`         | boolean     | default true           |
+| `created_by`      | uuid        |                        |
+| `created_at`      | timestamptz |                        |
+| `updated_at`      | timestamptz |                        |
 
 ### Database Functions
+
 - `create_organization_with_admin(_name text, _slug text) → uuid` — atomically creates an organization and an `organization_members` row with `role: "admin"` for the calling user; returns the new organization UUID
 
 ---
@@ -1023,6 +1072,7 @@ Streams a GPT security review of a skill artifact as Server-Sent Events.
 **Authorization:** `Authorization: Bearer <supabase-session-jwt>` — required. Validated via `supabase.auth.getClaims(token)`.
 
 **Request body (JSON, validated by Zod):**
+
 ```json
 {
   "artifactName": "SKILL.md",
@@ -1042,13 +1092,14 @@ Streams a GPT security review of a skill artifact as Server-Sent Events.
 
 **SSE event stream:**
 
-| Event | Payload | When |
-|---|---|---|
-| `reasoning` | `{ type: "reasoning", text: string }` | Each reasoning delta or reading-log chunk streamed live |
-| `done` | `{ type: "done", model: string, findings: Finding[], recommendation: AiRecommendation \| null }` | When model completes |
-| `error` | `{ type: "error", message: string }` | On any AI or server-side failure |
+| Event       | Payload                                                                                          | When                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `reasoning` | `{ type: "reasoning", text: string }`                                                            | Each reasoning delta or reading-log chunk streamed live |
+| `done`      | `{ type: "done", model: string, findings: Finding[], recommendation: AiRecommendation \| null }` | When model completes                                    |
+| `error`     | `{ type: "error", message: string }`                                                             | On any AI or server-side failure                        |
 
 **HTTP error responses:**
+
 - `401 Unauthorized` — missing, malformed, or expired JWT
 - `400 Invalid request` — Zod validation failure (body schema mismatch)
 - `500` — `OPENAI_API_KEY` environment variable not set
@@ -1059,22 +1110,22 @@ Streams a GPT security review of a skill artifact as Server-Sent Events.
 
 All 14 server functions are defined in `src/lib/workspace.functions.ts` using `createServerFn` + `requireSupabaseAuth` middleware. They are called from client code via `useServerFn`. All inputs are validated with Zod schemas before any database operation.
 
-| Function | Method | Auth | Description |
-|---|---|---|---|
-| `getWorkspace` | GET | Required | Load org, role, risk settings, last 100 scans |
-| `createWorkspace` | POST | Required | Create org + admin membership via `create_organization_with_admin` RPC |
-| `updateRiskSettings` | POST | Required (admin) | Update `acceptable_score`, `malicious_score`, `block_on_critical` |
-| `saveScan` | POST | Required | Persist scan + findings; enforce auto-block; set AI recommendation status |
-| `getScanFindings` | GET | Required | Fetch all findings for a scan (ordered by severity ascending) |
-| `reviewFinding` | POST | Required (admin/analyst) | Update finding status; re-score scan; update containment |
-| `decideRecommendation` | POST | Required (admin/analyst) | Approve/reject AI containment recommendation; enforce or record decision |
-| `listPendingApprovals` | GET | Required | Fetch pending findings (status: pending_confirm) + pending AI containment scans |
-| `deleteScan` | POST | Required (admin/analyst) | Delete scan and cascade findings |
-| `listCustomChecks` | GET | Required | Fetch org custom checks ordered by created_at ascending |
-| `createCustomCheck` | POST | Required (admin/analyst) | Create a custom check; code stored uppercase; unique-code error surfaced as friendly message |
-| `setCustomCheckEnabled` | POST | Required (admin/analyst) | Toggle custom check enabled flag |
-| `deleteCustomCheck` | POST | Required (admin/analyst) | Permanently delete a custom check |
-| `suggestCustomChecks` | POST | Required (admin/analyst) | AI-generate up to 6 new check proposals from uploaded skill files |
+| Function                | Method | Auth                     | Description                                                                                  |
+| ----------------------- | ------ | ------------------------ | -------------------------------------------------------------------------------------------- |
+| `getWorkspace`          | GET    | Required                 | Load org, role, risk settings, last 100 scans                                                |
+| `createWorkspace`       | POST   | Required                 | Create org + admin membership via `create_organization_with_admin` RPC                       |
+| `updateRiskSettings`    | POST   | Required (admin)         | Update `acceptable_score`, `malicious_score`, `block_on_critical`                            |
+| `saveScan`              | POST   | Required                 | Persist scan + findings; enforce auto-block; set AI recommendation status                    |
+| `getScanFindings`       | GET    | Required                 | Fetch all findings for a scan (ordered by severity ascending)                                |
+| `reviewFinding`         | POST   | Required (admin/analyst) | Update finding status; re-score scan; update containment                                     |
+| `decideRecommendation`  | POST   | Required (admin/analyst) | Approve/reject AI containment recommendation; enforce or record decision                     |
+| `listPendingApprovals`  | GET    | Required                 | Fetch pending findings (status: pending_confirm) + pending AI containment scans              |
+| `deleteScan`            | POST   | Required (admin/analyst) | Delete scan and cascade findings                                                             |
+| `listCustomChecks`      | GET    | Required                 | Fetch org custom checks ordered by created_at ascending                                      |
+| `createCustomCheck`     | POST   | Required (admin/analyst) | Create a custom check; code stored uppercase; unique-code error surfaced as friendly message |
+| `setCustomCheckEnabled` | POST   | Required (admin/analyst) | Toggle custom check enabled flag                                                             |
+| `deleteCustomCheck`     | POST   | Required (admin/analyst) | Permanently delete a custom check                                                            |
+| `suggestCustomChecks`   | POST   | Required (admin/analyst) | AI-generate up to 6 new check proposals from uploaded skill files                            |
 
 ---
 
@@ -1088,6 +1139,7 @@ Lume applies security controls at every layer:
 Deterministic scanning runs entirely in the browser using standard Web APIs. Skill content never leaves the client during the pattern-matching phase. Binary files are classified and excluded without being transmitted. Only a content slice (≤ 500k chars) is sent to the server for AI analysis.
 
 **2. JWT validation (two places)**
+
 - `requireSupabaseAuth` middleware: validates the Bearer JWT on every server function via `supabase.auth.getClaims(token)`. Verifies the JWT signature and extracts `sub` (userId). Throws `"Unauthorized"` for missing headers, non-Bearer schemes, non-JWT-format tokens, or invalid claims.
 - `/api/ai-scan` route: independently validates the Bearer token using the same `getClaims` mechanism before any AI call is made.
 
@@ -1101,24 +1153,26 @@ Every server function input is parsed by a strict Zod schema before any database
 The `canEdit` flag gates all mutation UI (review findings, manage checks, approve queue). The `canSave` flag gates policy saves. Server functions verify the calling user's role indirectly through RLS — only organization members can write to organization-scoped tables.
 
 **6. AI safety guardrails**
+
 - The AI recommendation is **never automatically enforced** (except auto-block on critical, which is a deterministic rule not an AI decision)
 - The AI system prompt explicitly prohibits inventing findings: "Be conservative and evidence-bound. Never invent a finding."
 - All AI output is passed through normalizers before storage: severity and layer are validated against allowlists; confidence is clamped; evidence and reason fields are length-limited
 - AI findings get `source: "ai"` attribution, distinguishing them from deterministic rule findings in the UI and database
 
 **7. Content limits**
-| Limit | Value |
-|---|---|
-| Max artifact upload | 20 MB (pre- and post-ZIP) |
-| Max AI content per call | 500,000 chars |
-| Max AI findings in response | 30 per call |
-| Max deterministic findings sent to AI | 200 per call |
-| Max check suggestion proposals | 6 per call |
-| Max regex pattern length (custom) | 400 chars |
-| Max regex pattern length (suggested) | 300 chars |
-| Max findings per rule per file | 5 |
-| Scan history loaded per workspace | 100 records |
-| Approval queue findings loaded | 200 records |
+
+| Limit                                 | Value                     |
+| ------------------------------------- | ------------------------- |
+| Max artifact upload                   | 20 MB (pre- and post-ZIP) |
+| Max AI content per call               | 500,000 chars             |
+| Max AI findings in response           | 30 per call               |
+| Max deterministic findings sent to AI | 200 per call              |
+| Max check suggestion proposals        | 6 per call                |
+| Max regex pattern length (custom)     | 400 chars                 |
+| Max regex pattern length (suggested)  | 300 chars                 |
+| Max findings per rule per file        | 5                         |
+| Scan history loaded per workspace     | 100 records               |
+| Approval queue findings loaded        | 200 records               |
 
 **8. No secrets on the client**
 `OPENAI_API_KEY`, `SUPABASE_URL` (server-side), and `SUPABASE_PUBLISHABLE_KEY` (server-side) are only read from `process.env` inside server functions and the API route. The client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable — not secret keys).
