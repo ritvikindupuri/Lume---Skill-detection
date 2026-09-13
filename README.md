@@ -2,9 +2,7 @@
 
 > **Deep security inspection for Claude skills. Know what an AI skill will do before you trust it.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-lume--skill--detection-6366f1?style=for-the-badge&logo=cloudflare&logoColor=white)](https://lume---skill-detection.codeworker.workers.dev/)
-
-🚀 **Try the Live Application:** [https://lume---skill-detection.codeworker.workers.dev/](https://lume---skill-detection.codeworker.workers.dev/)
+**Live Application:** [https://lume---skill-detection.codeworker.workers.dev/](https://lume---skill-detection.codeworker.workers.dev/)
 
 Lume is a full-stack security platform that scans Claude skill artifacts for hidden intent, unsafe behavior, data leakage, and supply-chain compromise before they run in your environment. It combines 35 deterministic rule-based checks with a live GPT-powered AI reviewer that reasons through each skill's content in real time, delivering a scored verdict of clean, suspicious, or malicious alongside per-finding remediation guidance and a human-in-the-loop approval workflow.
 
