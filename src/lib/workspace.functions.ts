@@ -68,7 +68,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
 
 export const createWorkspace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ name: z.string().trim().min(2).max(120) }).parse(input))
+  .validator((input) => z.object({ name: z.string().trim().min(2).max(120) }).parse(input))
   .handler(async ({ data, context }) => {
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "workspace";
     const slug = `${base}-${crypto.randomUUID().slice(0, 8)}`;
@@ -79,7 +79,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
 
 export const updateRiskSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({
+  .validator((input) => z.object({
     organizationId: z.string().uuid(),
     acceptableScore: z.number().int().min(0).max(98),
     maliciousScore: z.number().int().min(1).max(100),
@@ -98,7 +98,7 @@ export const updateRiskSettings = createServerFn({ method: "POST" })
 
 export const saveScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => scanSchema.parse(input))
+  .validator((input) => scanSchema.parse(input))
   .handler(async ({ data, context }) => {
     const settings = await context.supabase
       .from("risk_settings")
@@ -150,7 +150,7 @@ export const saveScan = createServerFn({ method: "POST" })
 
 export const getScanFindings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("scan_findings")
@@ -163,7 +163,7 @@ export const getScanFindings = createServerFn({ method: "GET" })
 
 export const reviewFinding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({
+  .validator((input) => z.object({
     findingId: z.string().uuid(),
     scanId: z.string().uuid(),
     status: z.enum(["open", "pending_confirm", "confirmed", "false_positive"]),
@@ -226,7 +226,7 @@ export const reviewFinding = createServerFn({ method: "POST" })
 
 export const decideRecommendation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({
+  .validator((input) => z.object({
     scanId: z.string().uuid(),
     decision: z.enum(["approve", "reject"]),
   }).parse(input))
@@ -249,7 +249,7 @@ export const decideRecommendation = createServerFn({ method: "POST" })
 
 export const listPendingApprovals = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const [findings, scans] = await Promise.all([
       context.supabase
@@ -289,7 +289,7 @@ export const listPendingApprovals = createServerFn({ method: "GET" })
 
 export const deleteScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ scanId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.from("skill_scans").delete().eq("id", data.scanId);
     if (result.error) throw new Error("Could not delete this scan.");
@@ -314,7 +314,7 @@ const customCheckSchema = z.object({
 
 export const listCustomChecks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ organizationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase
       .from("custom_checks")
@@ -327,7 +327,7 @@ export const listCustomChecks = createServerFn({ method: "GET" })
 
 export const createCustomCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => customCheckSchema.parse(input))
+  .validator((input) => customCheckSchema.parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.from("custom_checks").insert({
       organization_id: data.organizationId,
@@ -349,7 +349,7 @@ export const createCustomCheck = createServerFn({ method: "POST" })
 
 export const setCustomCheckEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ id: z.string().uuid(), enabled: z.boolean() }).parse(input))
+  .validator((input) => z.object({ id: z.string().uuid(), enabled: z.boolean() }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.from("custom_checks").update({ enabled: data.enabled }).eq("id", data.id);
     if (result.error) throw new Error("Could not update this check.");
@@ -358,7 +358,7 @@ export const setCustomCheckEnabled = createServerFn({ method: "POST" })
 
 export const deleteCustomCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const result = await context.supabase.from("custom_checks").delete().eq("id", data.id);
     if (result.error) throw new Error("Could not delete this check.");
@@ -367,7 +367,7 @@ export const deleteCustomCheck = createServerFn({ method: "POST" })
 
 export const suggestCustomChecks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({
+  .validator((input) => z.object({
     organizationId: z.string().uuid(),
     artifacts: z.array(z.object({
       name: z.string().min(1).max(255),
