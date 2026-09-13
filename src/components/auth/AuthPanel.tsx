@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { LoaderCircle, ShieldCheck } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,7 @@ export function AuthPanel() {
 
   return (
     <div className="w-full max-w-[420px]">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-primary" />
-        <p className="text-sm font-medium text-primary">Secure workspace</p>
-      </div>
-      <h1 className="mt-3 font-display text-4xl font-semibold">
+      <h1 className="font-display text-4xl font-semibold">
         {mode === "signin" ? "Welcome back." : "Create your workspace."}
       </h1>
       <p className="mt-3 text-muted-foreground">
