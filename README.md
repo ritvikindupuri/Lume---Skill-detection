@@ -102,26 +102,34 @@ bun install
 
 ### 3. Configure Environment Variables
 
-Copy the example and fill in your values:
+Copy the example environment file:
 
 ```bash
-cp .env .env.local
+cp .env.example .env
 ```
 
-Open `.env.local` and set:
+Open `.env` (or `.env.local`) and configure your credentials:
 
 ```env
-# Supabase — found in your Supabase project -> Settings -> API
+# Supabase — found in Supabase Dashboard -> Project Settings -> API
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_<your-key>
 
-# OpenAI — your OpenAI API key
-OPENAI_API_KEY=<your-openai-api-key>
+# OpenAI — your OpenAI API key for live AI review and suggestions
+OPENAI_API_KEY=sk-<your-openai-api-key>
+
+# Optional: Supabase Service Role Key (for admin-only server operations)
+# SUPABASE_SERVICE_ROLE_KEY=sb_secret_<your-service-role-key>
+
+# Optional: PostgreSQL Database URL (for direct migration/Drizzle Studio)
+# DATABASE_URL=postgresql://postgres:<password>@db.<your-project-ref>.supabase.co:5432/postgres
 ```
 
-> **Note:** `SUPABASE_URL` and `VITE_SUPABASE_URL` should be identical. The `VITE_` prefix exposes the value to the browser bundle; the unprefixed version is used by server functions.
+> **Note:**
+> - `SUPABASE_URL` and `VITE_SUPABASE_URL` should be identical. The `VITE_` prefix exposes the variable to client components, while the unprefixed variable is used by server functions and API routes.
+> - When deploying to **Cloudflare Pages**, add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `OPENAI_API_KEY` under **Settings -> Environment variables**.
 
 ### 4. Set Up the Database
 
