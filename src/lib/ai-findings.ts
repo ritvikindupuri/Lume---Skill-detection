@@ -5,9 +5,15 @@ const allowedSeverities = new Set<Severity>(["critical", "high", "medium", "low"
 const allowedLayers = new Set<Layer>(["prompt", "agency", "leakage", "privacy", "supply-chain", "integrity", "bias", "resilience"]);
 
 export function extractJson(text: string): unknown {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1];
-  const candidate = fenced ?? text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  return JSON.parse(candidate);
+  try {
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text)?.[1];
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    const candidate = fenced ?? (firstBrace !== -1 && lastBrace > firstBrace ? text.slice(firstBrace, lastBrace + 1) : "{}");
+    return JSON.parse(candidate);
+  } catch {
+    return {};
+  }
 }
 
 export function normalizeFindings(value: unknown): Finding[] {
