@@ -44,15 +44,26 @@ export async function readArtifact(
       if (entries.length === 0) throw new ArtifactError(`${file.name} contains no files.`);
       let zipBytes = 0;
       for (const entry of entries) {
+        const normalizedPath = entry.name.replace(/\\/g, "/").replace(/^\/+/, "");
+        if (
+          normalizedPath.includes("..") ||
+          normalizedPath.startsWith("/") ||
+          /^[a-zA-Z]:/.test(normalizedPath)
+        ) {
+          throw new ArtifactError(
+            `Archive contains unsafe path: ${entry.name}. Path traversal is not allowed.`,
+          );
+        }
+
         const bytes = await entry.async("uint8array");
         zipBytes += bytes.byteLength;
         if (zipBytes > MAX_TOTAL_BYTES) {
           throw new ArtifactError("Uncompressed archive exceeds the 20 MB limit.");
         }
         out.push({
-          path: entry.name,
+          path: normalizedPath,
           size: bytes.byteLength,
-          text: decode(bytes, entry.name),
+          text: decode(bytes, normalizedPath),
         });
       }
       continue;

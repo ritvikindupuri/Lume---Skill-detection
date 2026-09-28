@@ -42,10 +42,31 @@ async function authorize(request: Request): Promise<boolean> {
   return !error && Boolean(data?.claims?.sub);
 }
 
+function getAllowedOrigins(): string[] {
+  const envOrigins = process.env["ALLOWED_ORIGINS"];
+  if (envOrigins) {
+    return envOrigins.split(",").map((o) => o.trim());
+  }
+  return [];
+}
+
+function checkCors(request: Request): { allowed: boolean; origin?: string } {
+  const origin = request.headers.get("origin");
+  if (!origin) return { allowed: true };
+  const allowedOrigins = getAllowedOrigins();
+  if (allowedOrigins.length === 0) return { allowed: true };
+  return { allowed: allowedOrigins.includes(origin), origin };
+}
+
 export const Route = createFileRoute("/api/ai-scan")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const cors = checkCors(request);
+        if (!cors.allowed) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
         if (!(await authorize(request))) return new Response("Unauthorized", { status: 401 });
 
         const parsed = bodySchema.safeParse(await request.json());
@@ -138,6 +159,9 @@ export const Route = createFileRoute("/api/ai-scan")({
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
           },
         });
       },
